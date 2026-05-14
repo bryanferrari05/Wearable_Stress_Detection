@@ -1,0 +1,59 @@
+# BVP wrist + kNN LOSO summary
+
+Dataset usato: data_features\bvp_features_all_60s.csv
+Feature usate: bvp_mean, bvp_std, bvp_min, bvp_max, bvp_range, bvp_median, bvp_iqr, bvp_rms, bvp_energy, bvp_skew, bvp_kurtosis, bvp_peak_count, bvp_valid_ibi_count, bvp_peak_prominence_mean, bvp_peak_prominence_std, bvp_ibi_mean, bvp_ibi_std, bvp_ibi_min, bvp_ibi_max, bvp_hr_mean, bvp_hr_std, bvp_hr_min, bvp_hr_max, bvp_rmssd, bvp_sdnn
+Feature avanzate richieste ma non presenti nel CSV: nessuna
+Feature fisiologiche HR/HRV richieste ma non presenti nel CSV: nessuna
+Feature escluse per evitare leakage: subject, start_sec, end_sec, label, original_label, label_purity
+Modello usato: KNeighborsClassifier
+n_neighbors = 9
+weights = distance
+Metodo di validazione: Leave-One-Subject-Out
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.8277 (82.77%)
+Precision media sui fold: 0.7503 (75.03%)
+Recall media sui fold: 0.6947 (69.47%)
+F1 media sui fold: 0.6990 (69.90%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.8279 (82.79%)
+Precision aggregata globale: 0.7203 (72.03%)
+Recall aggregata globale: 0.6978 (69.78%)
+F1 aggregata globale: 0.7089 (70.89%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[661  87]
+ [ 97 224]]
+TN=661, FP=87, FN=97, TP=224
+Falsi stress (FP, non-stress predetto stress): 87
+Stress mancati (FN, stress predetto non-stress): 97
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.87      0.88      0.88       748
+           1       0.72      0.70      0.71       321
+
+    accuracy                           0.83      1069
+   macro avg       0.80      0.79      0.79      1069
+weighted avg       0.83      0.83      0.83      1069
+
+
+## Controlli predizioni
+Classi predette globalmente: [0, 1]
+Il modello predice entrambe le classi.
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.5490).
+- S15: accuracy=0.6761, precision=0.4667, recall=0.3182, f1=0.3784, TN=41, FP=8, FN=15, TP=7
+- S9: accuracy=0.7500, precision=0.6364, recall=0.3333, f1=0.4375, TN=47, FP=4, FN=14, TP=7
+
+## Confronto indicativo con il paper
+Paper WESAD BVP + kNN accuracy circa: 82.06%
+Paper WESAD BVP + kNN F1 circa: 78.94%
+Nota: il confronto e' indicativo perche' questa pipeline usa feature BVP statistiche e fisiologiche disponibili nel CSV.

@@ -8,6 +8,8 @@ __pycache__/
 
 # Dataset raw WESAD
 S2/
+WESAD/
+data_raw/
 *.pkl
 
 # OS / temp

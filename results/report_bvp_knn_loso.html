@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report BVP wrist + kNN LOSO</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --paper: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6b7a;
+      --line: #d9dee7;
+      --accent: #0f766e;
+      --accent-soft: #e4f4f1;
+      --warn: #92400e;
+      --warn-soft: #fff7ed;
+      --good: #166534;
+      --good-soft: #ecfdf3;
+      --code: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      padding: 32px 28px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    h2 {
+      margin: 34px 0 14px;
+      font-size: 24px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 8px 0 12px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    code, pre {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+    }
+
+    code {
+      background: #eef2f7;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--code);
+      color: #f9fafb;
+      padding: 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef2f7;
+      font-weight: 700;
+    }
+
+    ul, ol {
+      padding-left: 24px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 980px;
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .metric {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      margin-top: 4px;
+      color: var(--accent);
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border: 1px solid #b7e3dc;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .warning {
+      background: var(--warn-soft);
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .success {
+      background: var(--good-soft);
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc a {
+      display: block;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .grid, .toc {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      header {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>WESAD BVP wrist + kNN LOSO: report del lavoro svolto</h1>
+    <p class="subtitle">
+      Riassunto operativo di tutto il percorso fatto: pulizia codice, validazione CSV,
+      baseline kNN, feature statistiche avanzate, tuning leggero, peak detection e
+      feature HR/HRV semplici.
+    </p>
+  </header>
+
+  <main>
+    <section id="sintesi">
+      <h2>Sintesi Finale</h2>
+      <div class="grid">
+        <div class="metric">
+          Dataset finale
+          <strong>1069</strong>
+          <span class="small">finestre, 15 soggetti</span>
+        </div>
+        <div class="metric">
+          Feature finali
+          <strong>25</strong>
+          <span class="small">BVP statistiche + HR/HRV</span>
+        </div>
+        <div class="metric">
+          Accuracy finale
+          <strong>82.79%</strong>
+          <span class="small">LOSO, k=9, distance</span>
+        </div>
+        <div class="metric">
+          F1 finale
+          <strong>70.89%</strong>
+          <span class="small">classe stress</span>
+        </div>
+      </div>
+
+      <div class="success">
+        <strong>Risultato principale:</strong> siamo partiti da un F1 aggregato del
+        <strong>29.08%</strong> con feature BVP minime e siamo arrivati a
+        <strong>70.89%</strong> aggiungendo feature fisiologiche derivate dai picchi
+        BVP, mantenendo Leave-One-Subject-Out e senza data leakage.
+      </div>
+    </section>
+
+    <section id="indice">
+      <h2>Indice</h2>
+      <ul class="toc">
+        <li><a href="#stato-iniziale">1. Stato iniziale</a></li>
+        <li><a href="#pipeline">2. Pipeline e controlli anti-leakage</a></li>
+        <li><a href="#test">3. Test e risultati</a></li>
+        <li><a href="#feature-statistiche">4. Feature statistiche</a></li>
+        <li><a href="#tuning">5. Tuning kNN</a></li>
+        <li><a href="#peak-hrv">6. Peak detection e HR/HRV</a></li>
+        <li><a href="#risultato-finale">7. Risultato finale</a></li>
+        <li><a href="#spiegazione-orale">8. Come spiegarlo</a></li>
+        <li><a href="#file">9. File prodotti</a></li>
+      </ul>
+    </section>
+
+    <section id="stato-iniziale">
+      <h2>1. Da Dove Siamo Partiti</h2>
+      <p>
+        Il progetto partiva da una pipeline BVP wrist su WESAD: lettura dei file
+        <code>.pkl</code>, segmentazione in finestre da 60 secondi con step da 30 secondi,
+        mapping binario delle label e salvataggio di un CSV di feature.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Elemento</th>
+            <th>Scelta usata</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Segnale</td>
+            <td>BVP wrist</td>
+            <td>Segnale da polso scelto dalla roadmap per il primo modello kNN.</td>
+          </tr>
+          <tr>
+            <td>Windowing</td>
+            <td>60s, step 30s</td>
+            <td>Finestra abbastanza lunga per estrarre statistiche e feature cardiache.</td>
+          </tr>
+          <tr>
+            <td>Label originali</td>
+            <td>1 baseline, 2 stress, 3 amusement</td>
+            <td>Solo le classi utili al task binario.</td>
+          </tr>
+          <tr>
+            <td>Mapping binario</td>
+            <td>1 e 3 -> 0; 2 -> 1</td>
+            <td>0 = non-stress, 1 = stress.</td>
+          </tr>
+          <tr>
+            <td>Purezza label</td>
+            <td>&gt;= 0.70</td>
+            <td>Scarta finestre troppo miste o ambigue.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="card">
+        <h3>CSV finale validato</h3>
+        <ul>
+          <li>File: <code>data_features/bvp_features_all_60s.csv</code></li>
+          <li>Shape finale: <code>(1069, 33)</code></li>
+          <li>Soggetti: <code>15</code> soggetti validi WESAD: S2-S11, S13-S17</li>
+          <li>Distribuzione label: <code>0: 748</code>, <code>1: 321</code></li>
+          <li>Original label: <code>1: 575</code>, <code>2: 321</code>, <code>3: 173</code></li>
+          <li>Purezza minima: <code>0.7039</code></li>
+          <li>NaN: <code>0</code> in tutte le colonne finali</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <h2>2. Pipeline e Controlli Anti-Leakage</h2>
+      <p>
+        La valutazione e' stata fatta con <strong>Leave-One-Subject-Out</strong>:
+        a ogni fold un soggetto intero viene lasciato fuori come test set, mentre
+        gli altri soggetti sono usati per il training.
+      </p>
+
+      <div class="note">
+        <strong>Punto metodologico essenziale:</strong> non abbiamo usato uno split casuale
+        sulle righe. Le finestre dello stesso soggetto sono simili tra loro; se finissero
+        sia in train sia in test, il risultato sarebbe troppo ottimistico.
+      </div>
+
+      <h3>Schema del fold LOSO</h3>
+      <pre><code>for train_idx, test_idx in LeaveOneGroupOut().split(X, y, groups):
+    X_train = X.iloc[train_idx]
+    X_test = X.iloc[test_idx]
+    y_train = y.iloc[train_idx]
+    y_test = y.iloc[test_idx]
+
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    model = KNeighborsClassifier(n_neighbors=9, weights="distance")
+    model.fit(X_train_scaled, y_train)
+    y_pred = model.predict(X_test_scaled)</code></pre>
+
+      <h3>Feature escluse dal modello</h3>
+      <p>
+        Queste colonne sono state mantenute nel CSV come metadati o target, ma non sono
+        mai entrate in <code>X</code>:
+      </p>
+      <p>
+        <code>subject</code>, <code>start_sec</code>, <code>end_sec</code>,
+        <code>label</code>, <code>original_label</code>, <code>label_purity</code>.
+      </p>
+    </section>
+
+    <section id="test">
+      <h2>3. Test Fatti e Miglioramenti Progressivi</h2>
+      <p>
+        La tabella mostra il percorso fatto durante la chat. Le metriche sono aggregate
+        su tutte le predizioni LOSO.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Passo</th>
+            <th>Feature</th>
+            <th>Modello</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1</th>
+            <th>Confusion matrix</th>
+            <th>Interpretazione</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Baseline iniziale</td>
+            <td>5 feature base</td>
+            <td>k=9, uniform</td>
+            <td>66.23%</td>
+            <td>39.36%</td>
+            <td>23.05%</td>
+            <td>29.08%</td>
+            <td>TN=634, FP=114, FN=247, TP=74</td>
+            <td>Troppi stress mancati: recall molto basso.</td>
+          </tr>
+          <tr>
+            <td>Pesi sulle distanze</td>
+            <td>5 feature base</td>
+            <td>k=9, distance</td>
+            <td>66.14%</td>
+            <td>40.19%</td>
+            <td>26.17%</td>
+            <td>31.70%</td>
+            <td>TN=623, FP=125, FN=237, TP=84</td>
+            <td>Piccolo aumento del F1: i vicini piu' vicini contano di piu'.</td>
+          </tr>
+          <tr>
+            <td>Feature statistiche avanzate</td>
+            <td>11 feature statistiche BVP</td>
+            <td>k=9, distance</td>
+            <td>75.87%</td>
+            <td>62.26%</td>
+            <td>49.84%</td>
+            <td>55.36%</td>
+            <td>TN=651, FP=97, FN=161, TP=160</td>
+            <td>Salto netto: le statistiche aggiuntive descrivono meglio il segnale.</td>
+          </tr>
+          <tr>
+            <td>Tuning leggero</td>
+            <td>11 feature statistiche BVP</td>
+            <td>best: k=21, distance</td>
+            <td>77.74%</td>
+            <td>67.51%</td>
+            <td>49.84%</td>
+            <td>57.35%</td>
+            <td>TN=671, FP=77, FN=161, TP=160</td>
+            <td>Migliora poco: il limite non era solo k.</td>
+          </tr>
+          <tr>
+            <td>Peak detection + HR/HRV</td>
+            <td>25 feature BVP finali</td>
+            <td>k=9, distance</td>
+            <td>82.79%</td>
+            <td>72.03%</td>
+            <td>69.78%</td>
+            <td>70.89%</td>
+            <td>TN=661, FP=87, FN=97, TP=224</td>
+            <td>Grande miglioramento: le feature cardiache catturano meglio lo stress.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="success">
+        Il miglioramento piu' importante non arriva dal tuning di k, ma dal passaggio
+        da feature statistiche generiche a feature fisiologiche basate sui picchi BVP.
+      </div>
+    </section>
+
+    <section id="feature-statistiche">
+      <h2>4. Feature Statistiche Aggiunte</h2>
+      <p>
+        All'inizio il modello usava solo <code>mean</code>, <code>std</code>,
+        <code>min</code>, <code>max</code>, <code>range</code>. Poi abbiamo aggiunto
+        feature statistiche per descrivere meglio la distribuzione del segnale nella
+        finestra.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Formula / idea</th>
+            <th>Interpretazione</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>bvp_median</code></td>
+            <td>Mediana dei valori BVP</td>
+            <td>Valore centrale piu' robusto della media rispetto agli outlier.</td>
+          </tr>
+          <tr>
+            <td><code>bvp_iqr</code></td>
+            <td>Q75 - Q25</td>
+            <td>Dispersione robusta del segnale.</td>
+          </tr>
+          <tr>
+            <td><code>bvp_rms</code></td>
+            <td>sqrt(mean(x^2))</td>
+            <td>Energia media effettiva del segnale.</td>
+          </tr>
+          <tr>
+            <td><code>bvp_energy</code></td>
+            <td>sum(x^2)</td>
+            <td>Energia totale nella finestra da 60 secondi.</td>
+          </tr>
+          <tr>
+            <td><code>bvp_skew</code></td>
+            <td>mean(((x - mean) / std)^3)</td>
+            <td>Asimmetria della distribuzione.</td>
+          </tr>
+          <tr>
+            <td><code>bvp_kurtosis</code></td>
+            <td>mean(((x - mean) / std)^4) - 3</td>
+            <td>Quanto la distribuzione e' appuntita o pesante sulle code.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="tuning">
+      <h2>5. Tuning Leggero kNN</h2>
+      <p>
+        Abbiamo provato 16 configurazioni mantenendo invariati CSV, feature statistiche,
+        LOSO e scaling:
+      </p>
+
+      <pre><code>k_values = [1, 3, 5, 7, 9, 11, 15, 21]
+weights_values = ["uniform", "distance"]</code></pre>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>k</th>
+            <th>weights</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1</th>
+            <th>TN</th>
+            <th>FP</th>
+            <th>FN</th>
+            <th>TP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>21</td><td>distance</td><td>77.74%</td><td>67.51%</td><td>49.84%</td><td>57.35%</td><td>671</td><td>77</td><td>161</td><td>160</td></tr>
+          <tr><td>2</td><td>15</td><td>distance</td><td>77.27%</td><td>66.12%</td><td>49.84%</td><td>56.84%</td><td>666</td><td>82</td><td>161</td><td>160</td></tr>
+          <tr><td>3</td><td>11</td><td>distance</td><td>76.43%</td><td>63.53%</td><td>50.47%</td><td>56.25%</td><td>655</td><td>93</td><td>159</td><td>162</td></tr>
+          <tr><td>4</td><td>3</td><td>distance</td><td>75.30%</td><td>60.14%</td><td>52.65%</td><td>56.15%</td><td>636</td><td>112</td><td>152</td><td>169</td></tr>
+          <tr><td>5</td><td>21</td><td>uniform</td><td>77.27%</td><td>66.81%</td><td>48.29%</td><td>56.06%</td><td>671</td><td>77</td><td>166</td><td>155</td></tr>
+          <tr><td>10</td><td>9</td><td>distance</td><td>75.87%</td><td>62.26%</td><td>49.84%</td><td>55.36%</td><td>651</td><td>97</td><td>161</td><td>160</td></tr>
+        </tbody>
+      </table>
+
+      <div class="warning">
+        Il tuning ha migliorato il F1 solo da 55.36% a 57.35%. Questo ci ha indicato
+        che il problema principale non era la scelta di k, ma la qualita' fisiologica
+        delle feature.
+      </div>
+    </section>
+
+    <section id="peak-hrv">
+      <h2>6. Peak Detection e Feature HR/HRV Semplici</h2>
+      <p>
+        Il BVP e' un segnale legato al battito cardiaco. Ogni onda/picco del segnale
+        puo' corrispondere a un battito. Per questo abbiamo estratto feature piu'
+        fisiologiche: conteggio picchi, intervalli tra battiti, frequenza cardiaca e
+        semplici indici HRV.
+      </p>
+
+      <h3>6.1 Frequenza di campionamento</h3>
+      <p>
+        Il BVP wrist WESAD e' campionato a <code>64 Hz</code>. Questo significa:
+      </p>
+      <pre><code>64 campioni = 1 secondo
+3840 campioni = 60 secondi</code></pre>
+
+      <h3>6.2 Normalizzazione della finestra</h3>
+      <p>
+        Per rendere la soglia di peak detection meno dipendente dall'ampiezza assoluta,
+        ogni finestra viene normalizzata:
+      </p>
+      <pre><code>z = (signal - median(signal)) / std(signal)</code></pre>
+      <p>
+        La mediana rende il centraggio piu' robusto, mentre la deviazione standard porta
+        il segnale su una scala confrontabile tra finestre.
+      </p>
+
+      <h3>6.3 Ricerca dei picchi</h3>
+      <p>
+        Usiamo <code>find_peaks</code> di SciPy. Il BVP puo' avere orientamento diverso
+        a seconda del segnale, quindi cerchiamo picchi sia su <code>z</code> sia su
+        <code>-z</code>. Teniamo la direzione che produce piu' intervalli battito-battito
+        fisiologicamente plausibili.
+      </p>
+
+      <pre><code>positive_peaks = find_peaks(z, distance=21, prominence=0.35)
+negative_peaks = find_peaks(-z, distance=21, prominence=0.35)</code></pre>
+
+      <h3>6.4 Distanza minima tra picchi</h3>
+      <p>
+        Abbiamo imposto una frequenza cardiaca massima plausibile di <code>180 bpm</code>.
+        Da questo ricaviamo la distanza minima tra due battiti:
+      </p>
+      <pre><code>180 bpm = 3 battiti al secondo
+tempo minimo tra battiti = 1 / 3 = 0.333 secondi
+campioni minimi = 0.333 * 64 ~= 21 campioni</code></pre>
+      <p>
+        Quindi due picchi piu' vicini di circa 21 campioni non vengono contati come due
+        battiti separati.
+      </p>
+
+      <h3>6.5 Intervalli tra battiti: IBI</h3>
+      <p>
+        Una volta trovati gli indici dei picchi:
+      </p>
+      <pre><code>peaks = [100, 162, 225, 289, ...]</code></pre>
+      <p>calcoliamo la distanza tra picchi consecutivi:</p>
+      <pre><code>peak_diffs = diff(peaks)</code></pre>
+      <p>e convertiamo da campioni a secondi:</p>
+      <pre><code>IBI = peak_diffs / 64</code></pre>
+      <p>
+        IBI significa <strong>Inter-Beat Interval</strong>, cioe' il tempo tra un battito
+        e il successivo. Se due picchi distano 64 campioni:
+      </p>
+      <pre><code>IBI = 64 / 64 = 1 secondo</code></pre>
+
+      <h3>6.6 Filtro fisiologico sugli IBI</h3>
+      <p>
+        Abbiamo mantenuto solo intervalli compatibili con frequenze cardiache tra
+        <code>40</code> e <code>180 bpm</code>:
+      </p>
+      <pre><code>IBI minimo = 60 / 180 = 0.333 s
+IBI massimo = 60 / 40 = 1.5 s</code></pre>
+      <p>
+        Questo riduce falsi picchi e intervalli troppo lunghi dovuti a picchi mancati.
+      </p>
+
+      <h3>6.7 Heart Rate stimata</h3>
+      <p>
+        Per ogni IBI valido calcoliamo la frequenza cardiaca istantanea:
+      </p>
+      <pre><code>HR = 60 / IBI</code></pre>
+      <p>
+        Da questa sequenza ricaviamo:
+      </p>
+      <ul>
+        <li><code>bvp_hr_mean</code>: media della frequenza cardiaca stimata.</li>
+        <li><code>bvp_hr_std</code>: variabilita' della frequenza cardiaca.</li>
+        <li><code>bvp_hr_min</code>: frequenza cardiaca minima nella finestra.</li>
+        <li><code>bvp_hr_max</code>: frequenza cardiaca massima nella finestra.</li>
+      </ul>
+
+      <h3>6.8 HRV semplice: SDNN e RMSSD</h3>
+      <p>
+        HRV significa <strong>Heart Rate Variability</strong>, cioe' quanto variano gli
+        intervalli tra battiti. Due feature semplici e spiegabili sono:
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Formula</th>
+            <th>Significato</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>bvp_sdnn</code></td>
+            <td><code>std(IBI)</code></td>
+            <td>Deviazione standard degli intervalli battito-battito.</td>
+          </tr>
+          <tr>
+            <td><code>bvp_rmssd</code></td>
+            <td><code>sqrt(mean(diff(IBI)^2))</code></td>
+            <td>Variazione media tra intervalli consecutivi.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.9 Feature finali HR/HRV aggiunte</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Cosa misura</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>bvp_peak_count</code></td><td>Numero di picchi trovati nella finestra.</td></tr>
+          <tr><td><code>bvp_valid_ibi_count</code></td><td>Numero di intervalli IBI fisiologicamente validi.</td></tr>
+          <tr><td><code>bvp_peak_prominence_mean</code></td><td>Prominenza media dei picchi, cioe' quanto i picchi emergono dal segnale.</td></tr>
+          <tr><td><code>bvp_peak_prominence_std</code></td><td>Variabilita' della prominenza dei picchi.</td></tr>
+          <tr><td><code>bvp_ibi_mean</code></td><td>Intervallo medio tra battiti.</td></tr>
+          <tr><td><code>bvp_ibi_std</code></td><td>Variabilita' degli intervalli tra battiti.</td></tr>
+          <tr><td><code>bvp_ibi_min</code></td><td>Intervallo minimo tra battiti.</td></tr>
+          <tr><td><code>bvp_ibi_max</code></td><td>Intervallo massimo tra battiti.</td></tr>
+          <tr><td><code>bvp_hr_mean</code></td><td>Frequenza cardiaca media stimata.</td></tr>
+          <tr><td><code>bvp_hr_std</code></td><td>Variabilita' della frequenza cardiaca stimata.</td></tr>
+          <tr><td><code>bvp_hr_min</code></td><td>Frequenza cardiaca minima stimata.</td></tr>
+          <tr><td><code>bvp_hr_max</code></td><td>Frequenza cardiaca massima stimata.</td></tr>
+          <tr><td><code>bvp_rmssd</code></td><td>Indice HRV basato sulle differenze tra IBI successivi.</td></tr>
+          <tr><td><code>bvp_sdnn</code></td><td>Indice HRV basato sulla deviazione standard degli IBI.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.10 Controllo di plausibilita'</h3>
+      <p>
+        Dopo l'estrazione abbiamo verificato che nessuna finestra avesse zero IBI validi.
+        Inoltre la frequenza cardiaca media stimata e' coerente con il task:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Classe</th>
+            <th>HR medio stimato</th>
+            <th>RMSSD medio</th>
+            <th>SDNN medio</th>
+            <th>Peak count medio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>0 non-stress</td>
+            <td>79.42 bpm</td>
+            <td>0.2293</td>
+            <td>0.1823</td>
+            <td>72.92</td>
+          </tr>
+          <tr>
+            <td>1 stress</td>
+            <td>96.88 bpm</td>
+            <td>0.3057</td>
+            <td>0.2276</td>
+            <td>83.30</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        Questo controllo e' importante per la spiegazione: le feature HR/HRV non sono
+        numeri casuali, ma catturano una differenza fisiologica coerente. Nelle finestre
+        stress la frequenza cardiaca stimata e' piu' alta.
+      </div>
+    </section>
+
+    <section id="risultato-finale">
+      <h2>7. Risultato Finale</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Metrica</th>
+            <th>Valore finale</th>
+            <th>Commento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Accuracy aggregata</td><td>82.79%</td><td>Molto vicina/superiore al riferimento indicativo accuracy del paper BVP+kNN.</td></tr>
+          <tr><td>Precision stress</td><td>72.03%</td><td>Quando predice stress, spesso ha ragione.</td></tr>
+          <tr><td>Recall stress</td><td>69.78%</td><td>Trova molti piu' stress rispetto alle baseline precedenti.</td></tr>
+          <tr><td>F1 stress</td><td>70.89%</td><td>Ancora sotto il riferimento F1 del paper, ma molto migliorato.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Confusion matrix finale</h3>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Predetto 0 non-stress</th>
+            <th>Predetto 1 stress</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Vero 0 non-stress</th>
+            <td>TN = 661</td>
+            <td>FP = 87</td>
+          </tr>
+          <tr>
+            <th>Vero 1 stress</th>
+            <td>FN = 97</td>
+            <td>TP = 224</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Rispetto alla baseline iniziale, gli stress mancati sono passati da
+        <code>247</code> a <code>97</code>. Questo e' il miglioramento piu' importante:
+        il modello ora riconosce molti piu' esempi della classe stress.
+      </p>
+
+      <h3>Risultati per soggetto</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Soggetto lasciato fuori</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1</th>
+            <th>TN</th>
+            <th>FP</th>
+            <th>FN</th>
+            <th>TP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>S15</td><td>67.61%</td><td>46.67%</td><td>31.82%</td><td>37.84%</td><td>41</td><td>8</td><td>15</td><td>7</td></tr>
+          <tr><td>S9</td><td>75.00%</td><td>63.64%</td><td>33.33%</td><td>43.75%</td><td>47</td><td>4</td><td>14</td><td>7</td></tr>
+          <tr><td>S3</td><td>73.53%</td><td>54.55%</td><td>60.00%</td><td>57.14%</td><td>38</td><td>10</td><td>8</td><td>12</td></tr>
+          <tr><td>S6</td><td>81.94%</td><td>90.00%</td><td>42.86%</td><td>58.06%</td><td>50</td><td>1</td><td>12</td><td>9</td></tr>
+          <tr><td>S10</td><td>69.33%</td><td>51.61%</td><td>66.67%</td><td>58.18%</td><td>36</td><td>15</td><td>8</td><td>16</td></tr>
+          <tr><td>S2</td><td>80.60%</td><td>71.43%</td><td>52.63%</td><td>60.61%</td><td>44</td><td>4</td><td>9</td><td>10</td></tr>
+          <tr><td>S5</td><td>73.61%</td><td>52.63%</td><td>95.24%</td><td>67.80%</td><td>33</td><td>18</td><td>1</td><td>20</td></tr>
+          <tr><td>S13</td><td>81.69%</td><td>65.38%</td><td>80.95%</td><td>72.34%</td><td>41</td><td>9</td><td>4</td><td>17</td></tr>
+          <tr><td>S4</td><td>87.32%</td><td>100.00%</td><td>57.14%</td><td>72.73%</td><td>50</td><td>0</td><td>9</td><td>12</td></tr>
+          <tr><td>S7</td><td>85.92%</td><td>70.37%</td><td>90.48%</td><td>79.17%</td><td>42</td><td>8</td><td>2</td><td>19</td></tr>
+          <tr><td>S14</td><td>88.73%</td><td>79.17%</td><td>86.36%</td><td>82.61%</td><td>44</td><td>5</td><td>3</td><td>19</td></tr>
+          <tr><td>S8</td><td>91.55%</td><td>100.00%</td><td>71.43%</td><td>83.33%</td><td>50</td><td>0</td><td>6</td><td>15</td></tr>
+          <tr><td>S11</td><td>94.37%</td><td>100.00%</td><td>81.82%</td><td>90.00%</td><td>49</td><td>0</td><td>4</td><td>18</td></tr>
+          <tr><td>S16</td><td>94.44%</td><td>84.62%</td><td>100.00%</td><td>91.67%</td><td>46</td><td>4</td><td>0</td><td>22</td></tr>
+          <tr><td>S17</td><td>95.95%</td><td>95.45%</td><td>91.30%</td><td>93.33%</td><td>50</td><td>1</td><td>2</td><td>21</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="spiegazione-orale">
+      <h2>8. Spiegazione Pronta per l'Orale</h2>
+      <div class="card">
+        <p>
+          "Abbiamo iniziato con una baseline BVP+kNN usando feature statistiche semplici:
+          media, deviazione standard, minimo, massimo e range. La valutazione e' stata
+          fatta con Leave-One-Subject-Out per evitare leakage tra finestre dello stesso
+          soggetto. La baseline aveva un F1 basso, circa 29%, perche' il modello perdeva
+          molti esempi stress."
+        </p>
+        <p>
+          "Poi abbiamo aggiunto feature statistiche piu' informative, come mediana, IQR,
+          RMS, energia, skewness e kurtosis. Questo ha portato l'F1 a circa 55%. Abbiamo
+          anche provato un tuning leggero di k e dei pesi del kNN, ma il miglioramento era
+          limitato, fino a circa 57%."
+        </p>
+        <p>
+          "Il salto principale e' arrivato aggiungendo feature fisiologiche dal BVP. Il
+          BVP contiene onde legate ai battiti cardiaci; quindi abbiamo rilevato i picchi,
+          calcolato gli intervalli tra battiti, stimato la frequenza cardiaca e aggiunto
+          feature HRV semplici come SDNN e RMSSD. Con queste feature, mantenendo k=9 e
+          weights=distance, l'F1 e' arrivato a 70.89% e l'accuracy a 82.79%."
+        </p>
+      </div>
+
+      <div class="warning">
+        <strong>Limite da dichiarare:</strong> la peak detection e' una stima semplificata.
+        Non e' una pipeline clinica HRV completa: non include filtraggio avanzato,
+        rimozione artefatti sofisticata o validazione dei picchi battito per battito.
+        Pero' e' metodologicamente piu' fisiologica delle sole statistiche grezze.
+      </div>
+    </section>
+
+    <section id="file">
+      <h2>9. File Prodotti o Aggiornati</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Contenuto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/extract_bvp_features_all.py</code></td>
+            <td>Estrazione BVP con feature statistiche, peak detection e HR/HRV.</td>
+          </tr>
+          <tr>
+            <td><code>src/validate_bvp_csv.py</code></td>
+            <td>Validazione del CSV finale: soggetti, label, purezza, NaN e coerenza.</td>
+          </tr>
+          <tr>
+            <td><code>src/train_bvp_knn_loso.py</code></td>
+            <td>Training e valutazione kNN LOSO con k=9 e weights=distance.</td>
+          </tr>
+          <tr>
+            <td><code>src/tune_bvp_knn_loso.py</code></td>
+            <td>Tuning leggero di k e weights, prima delle feature HR/HRV.</td>
+          </tr>
+          <tr>
+            <td><code>data_features/bvp_features_all_60s.csv</code></td>
+            <td>CSV finale con 1069 finestre e 33 colonne.</td>
+          </tr>
+          <tr>
+            <td><code>results/bvp_knn_summary.txt</code></td>
+            <td>Metriche finali kNN LOSO con feature HR/HRV.</td>
+          </tr>
+          <tr>
+            <td><code>results/bvp_knn_loso_per_subject.csv</code></td>
+            <td>Metriche per soggetto lasciato fuori.</td>
+          </tr>
+          <tr>
+            <td><code>results/bvp_knn_tuning_results.csv</code></td>
+            <td>Risultati del tuning kNN.</td>
+          </tr>
+          <tr>
+            <td><code>PROGRESS.md</code></td>
+            <td>Registro sintetico dello stato del progetto.</td>
+          </tr>
+          <tr>
+            <td><code>results/report_bvp_knn_loso.html</code></td>
+            <td>Questo report HTML.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
