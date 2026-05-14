@@ -82,7 +82,7 @@
 
     pre {
       background: var(--code);
-      color: #f9fafb;
+      color: #2e7fcf;
       padding: 14px;
       border-radius: 8px;
       overflow-x: auto;
@@ -697,7 +697,157 @@ IBI massimo = 60 / 40 = 1.5 s</code></pre>
         </tbody>
       </table>
 
-      <h3>6.10 Controllo di plausibilita'</h3>
+      <h3>6.10 Come Ogni Feature HR/HRV Aiuta il Modello</h3>
+      <p>
+        Queste feature migliorano il modello perche' trasformano il BVP da semplice
+        sequenza numerica a descrizione fisiologica del battito cardiaco. Nel kNN ogni
+        finestra diventa un punto nello spazio delle feature: se le feature HR/HRV
+        separano meglio stress e non-stress, allora le finestre stress saranno piu'
+        vicine ad altre finestre stress.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Come puo' migliorare il modello</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>bvp_peak_count</code></td>
+            <td>
+              Conta quanti picchi, quindi circa quanti battiti, ci sono nella finestra
+              da 60 secondi. Se sotto stress il cuore batte piu' velocemente, il numero
+              di picchi aumenta. Aiuta quindi a distinguere finestre con maggiore
+              attivazione cardiaca.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_valid_ibi_count</code></td>
+            <td>
+              Conta quanti intervalli tra picchi sono fisiologicamente validi. E' utile
+              anche come indicatore di qualita': se molti IBI sono validi, le feature HR
+              e HRV calcolate su quella finestra sono piu' affidabili.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_peak_prominence_mean</code></td>
+            <td>
+              Misura quanto, in media, i picchi emergono dal segnale. Picchi piu'
+              marcati possono indicare una morfologia BVP diversa o un segnale piu'
+              netto. Puo' aiutare il modello, anche se puo' essere influenzata dalla
+              qualita' del sensore o dal movimento.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_peak_prominence_std</code></td>
+            <td>
+              Misura quanto varia la prominenza dei picchi. Se i battiti hanno forma
+              irregolare o il segnale cambia molto nella finestra, questa feature lo
+              cattura. Puo' rappresentare sia dinamica fisiologica sia artefatti, quindi
+              va interpretata con attenzione.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_ibi_mean</code></td>
+            <td>
+              E' l'intervallo medio tra battiti. E' inversamente collegato alla frequenza
+              cardiaca: IBI piu' basso significa battiti piu' ravvicinati e quindi HR
+              piu' alta. Sotto stress spesso l'IBI medio diminuisce.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_ibi_std</code></td>
+            <td>
+              Misura la variabilita' degli intervalli tra battiti. E' una misura HRV
+              semplice: se lo stress modifica la regolarita' del battito, questa feature
+              puo' aiutare a separare le classi.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_ibi_min</code></td>
+            <td>
+              Rappresenta l'intervallo minimo tra due battiti. Cattura il momento in cui
+              il cuore batte piu' velocemente nella finestra. Puo' essere utile se lo
+              stress produce accelerazioni brevi ma intense.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_ibi_max</code></td>
+            <td>
+              Rappresenta l'intervallo massimo tra due battiti. Cattura il momento piu'
+              lento della finestra. Insieme a <code>bvp_ibi_min</code> descrive il range
+              della dinamica cardiaca.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_hr_mean</code></td>
+            <td>
+              E' una delle feature piu' importanti e intuitive: stima la frequenza
+              cardiaca media. Nel nostro dataset era circa 79.42 bpm nel non-stress e
+              96.88 bpm nello stress, quindi fornisce una separazione fisiologica
+              chiara.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_hr_std</code></td>
+            <td>
+              Misura la variabilita' della frequenza cardiaca stimata. Se durante lo
+              stress la frequenza cambia piu' rapidamente o diventa meno stabile, questa
+              feature puo' catturarlo.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_hr_min</code></td>
+            <td>
+              Indica la frequenza cardiaca minima stimata nella finestra. Aiuta a
+              descrivere il livello cardiaco piu' basso raggiunto nei 60 secondi.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_hr_max</code></td>
+            <td>
+              Indica la frequenza cardiaca massima stimata nella finestra. Puo' catturare
+              picchi di attivazione fisiologica legati allo stress.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_rmssd</code></td>
+            <td>
+              E' una feature HRV calcolata come <code>sqrt(mean(diff(IBI)^2))</code>.
+              Misura quanto cambiano gli intervalli da un battito al successivo. E' utile
+              perche' lo stress puo' alterare la variabilita' battito-battito.
+            </td>
+          </tr>
+          <tr>
+            <td><code>bvp_sdnn</code></td>
+            <td>
+              E' la deviazione standard degli IBI, quindi una misura classica di HRV. Nel
+              nostro codice e' molto simile a <code>bvp_ibi_std</code>, quindi puo'
+              essere ridondante, ma e' fisiologicamente interpretabile.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        Le feature piu' semplici da spiegare in presentazione sono
+        <code>bvp_hr_mean</code>, <code>bvp_ibi_mean</code>, <code>bvp_peak_count</code>,
+        <code>bvp_rmssd</code> e <code>bvp_sdnn</code>. Le prime tre descrivono quanto
+        velocemente batte il cuore; le ultime due descrivono quanto varia il ritmo tra
+        battiti successivi.
+      </div>
+
+      <div class="warning">
+        Alcune feature sono correlate tra loro: per esempio <code>bvp_ibi_std</code> e
+        <code>bvp_sdnn</code> sono quasi equivalenti, mentre <code>bvp_ibi_mean</code> e
+        <code>bvp_hr_mean</code> contengono informazione simile ma invertita. Questo non
+        invalida il risultato, perche' il F1 e' migliorato molto, ma in una fase
+        successiva si potrebbe fare feature selection.
+      </div>
+
+      <h3>6.11 Controllo di plausibilita'</h3>
       <p>
         Dopo l'estrazione abbiamo verificato che nessuna finestra avesse zero IBI validi.
         Inoltre la frequenza cardiaca media stimata e' coerente con il task:

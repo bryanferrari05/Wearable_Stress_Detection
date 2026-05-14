@@ -44,4 +44,4 @@
 ## Report HTML
 
 - File creato: `results/report_bvp_knn_loso.html`
-- Contenuto: timeline del lavoro, test effettuati, metriche per ogni passo, spiegazione delle feature statistiche, peak detection, HR e HRV semplici.
+- Contenuto: timeline del lavoro, test effettuati, metriche per ogni passo, spiegazione delle feature statistiche, peak detection, HR/HRV semplici e motivazione feature-per-feature.
