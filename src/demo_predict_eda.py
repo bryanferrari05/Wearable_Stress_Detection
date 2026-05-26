@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
@@ -13,37 +14,40 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 
 
-TRAIN_FILE = Path("data_features") / "bvp_features_train_s2_s16_60s.csv"
-TEST_FILE = Path("data_features") / "bvp_features_test_s17_60s.csv"
+TRAIN_FILE = Path("data_features") / "eda_features_train_s2_s16_60s.csv"
+TEST_FILE = Path("data_features") / "eda_features_test_s17_60s.csv"
 RESULTS_DIR = Path("results")
-DEMO_OUTPUT_FILE = RESULTS_DIR / "demo_predictions_bvp_s17.csv"
+DEMO_OUTPUT_FILE = RESULTS_DIR / "demo_predictions_eda_s17.csv"
 
 FEATURE_COLS = [
-    "bvp_mean",
-    "bvp_std",
-    "bvp_min",
-    "bvp_max",
-    "bvp_range",
-    "bvp_median",
-    "bvp_iqr",
-    "bvp_rms",
-    "bvp_energy",
-    "bvp_skew",
-    "bvp_kurtosis",
-    "bvp_peak_count",
-    "bvp_valid_ibi_count",
-    "bvp_peak_prominence_mean",
-    "bvp_peak_prominence_std",
-    "bvp_ibi_mean",
-    "bvp_ibi_std",
-    "bvp_ibi_min",
-    "bvp_ibi_max",
-    "bvp_hr_mean",
-    "bvp_hr_std",
-    "bvp_hr_min",
-    "bvp_hr_max",
-    "bvp_rmssd",
-    "bvp_sdnn",
+    "eda_mean",
+    "eda_std",
+    "eda_min",
+    "eda_max",
+    "eda_range",
+    "eda_median",
+    "eda_iqr",
+    "eda_rms",
+    "eda_energy",
+    "eda_skew",
+    "eda_kurtosis",
+    "eda_slope",
+    "eda_derivative_mean",
+    "eda_derivative_std",
+    "eda_derivative_max",
+    "eda_tonic_mean",
+    "eda_tonic_std",
+    "eda_tonic_slope",
+    "eda_phasic_mean",
+    "eda_phasic_std",
+    "eda_phasic_max",
+    "eda_phasic_auc",
+    "eda_scr_count",
+    "eda_scr_rate_per_min",
+    "eda_scr_amplitude_mean",
+    "eda_scr_amplitude_std",
+    "eda_scr_amplitude_max",
+    "eda_scr_prominence_mean",
 ]
 
 TARGET_COL = "label"
@@ -71,21 +75,22 @@ def load_csv(path):
 
 
 def validate_dataset(df, dataset_name):
-    required_columns = FEATURE_COLS + [TARGET_COL, "subject", "start_sec", "end_sec"]
+    required_columns = FEATURE_COLS + [
+        TARGET_COL,
+        "subject",
+        "start_sec",
+        "end_sec",
+        "original_label",
+        "label_purity",
+    ]
     missing_columns = [column for column in required_columns if column not in df.columns]
 
     if missing_columns:
         raise ValueError(f"{dataset_name}: colonne mancanti: {missing_columns}")
-
     if df.empty:
         raise ValueError(f"{dataset_name}: dataset vuoto.")
-
-    feature_nan_counts = df[FEATURE_COLS].isna().sum()
-    if feature_nan_counts.any():
-        raise ValueError(
-            f"{dataset_name}: NaN nelle feature: "
-            f"{feature_nan_counts[feature_nan_counts > 0].to_dict()}"
-        )
+    if not np.isfinite(df[FEATURE_COLS].to_numpy(dtype=float)).all():
+        raise ValueError(f"{dataset_name}: NaN o valori infiniti nelle feature.")
 
 
 def train_model(train_df):
@@ -97,30 +102,25 @@ def train_model(train_df):
 
     model = KNeighborsClassifier(n_neighbors=K_NEIGHBORS, weights=KNN_WEIGHTS)
     model.fit(X_train_scaled, y_train)
-
     return scaler, model
 
 
 def predict_test_set(test_df, scaler, model):
-    X_test = test_df[FEATURE_COLS]
-    X_test_scaled = scaler.transform(X_test)
-
+    X_test_scaled = scaler.transform(test_df[FEATURE_COLS])
     predictions_df = test_df[
         ["subject", "start_sec", "end_sec", "original_label", "label", "label_purity"]
     ].copy()
     predictions_df["predicted_label"] = model.predict(X_test_scaled)
     probabilities = model.predict_proba(X_test_scaled)
-
-    class_to_probability_index = {
+    probability_index = {
         int(class_label): index for index, class_label in enumerate(model.classes_)
     }
-    stress_probability_index = class_to_probability_index.get(1)
-
-    if stress_probability_index is None:
-        predictions_df["stress_probability"] = 0.0
-    else:
-        predictions_df["stress_probability"] = probabilities[:, stress_probability_index]
-
+    stress_probability_index = probability_index.get(1)
+    predictions_df["stress_probability"] = (
+        probabilities[:, stress_probability_index]
+        if stress_probability_index is not None
+        else 0.0
+    )
     predictions_df["true_label_name"] = predictions_df["label"].map(label_name)
     predictions_df["predicted_label_name"] = predictions_df["predicted_label"].map(
         label_name
@@ -128,7 +128,6 @@ def predict_test_set(test_df, scaler, model):
     predictions_df["correct"] = (
         predictions_df["label"] == predictions_df["predicted_label"]
     )
-
     return predictions_df
 
 
@@ -142,26 +141,26 @@ def select_demo_rows(predictions_df, n_rows, random_state):
 
     for offset, label in enumerate(label_values):
         label_rows = predictions_df[predictions_df[TARGET_COL] == label]
-        sample_size = min(rows_per_label, len(label_rows))
         sampled_parts.append(
-            label_rows.sample(n=sample_size, random_state=random_state + offset)
+            label_rows.sample(
+                n=min(rows_per_label, len(label_rows)),
+                random_state=random_state + offset,
+            )
         )
 
     sampled_df = pd.concat(sampled_parts)
     remaining_rows = n_rows - len(sampled_df)
-
     if remaining_rows > 0:
-        remaining_candidates = predictions_df.drop(index=sampled_df.index)
-        if not remaining_candidates.empty:
-            sampled_df = pd.concat(
-                [
-                    sampled_df,
-                    remaining_candidates.sample(
-                        n=min(remaining_rows, len(remaining_candidates)),
-                        random_state=random_state + 100,
-                    ),
-                ]
-            )
+        candidates = predictions_df.drop(index=sampled_df.index)
+        sampled_df = pd.concat(
+            [
+                sampled_df,
+                candidates.sample(
+                    n=min(remaining_rows, len(candidates)),
+                    random_state=random_state + 100,
+                ),
+            ]
+        )
 
     return sampled_df.sort_values(["start_sec", "end_sec"]).reset_index(drop=True)
 
@@ -172,7 +171,10 @@ def print_metrics(predictions_df):
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
 
     print("Metriche su tutto il test set S17")
-    print(f"- Accuracy: {accuracy_score(y_true, y_pred):.4f} ({format_percent(accuracy_score(y_true, y_pred))})")
+    print(
+        f"- Accuracy: {accuracy_score(y_true, y_pred):.4f} "
+        f"({format_percent(accuracy_score(y_true, y_pred))})"
+    )
     print(
         f"- Precision stress: {precision_score(y_true, y_pred, pos_label=1, zero_division=0):.4f} "
         f"({format_percent(precision_score(y_true, y_pred, pos_label=1, zero_division=0))})"
@@ -181,7 +183,10 @@ def print_metrics(predictions_df):
         f"- Recall stress: {recall_score(y_true, y_pred, pos_label=1, zero_division=0):.4f} "
         f"({format_percent(recall_score(y_true, y_pred, pos_label=1, zero_division=0))})"
     )
-    print(f"- F1 stress: {f1_score(y_true, y_pred, pos_label=1, zero_division=0):.4f} ({format_percent(f1_score(y_true, y_pred, pos_label=1, zero_division=0))})")
+    print(
+        f"- F1 stress: {f1_score(y_true, y_pred, pos_label=1, zero_division=0):.4f} "
+        f"({format_percent(f1_score(y_true, y_pred, pos_label=1, zero_division=0))})"
+    )
     print(f"- Confusion matrix: TN={tn}, FP={fp}, FN={fn}, TP={tp}")
 
 
@@ -202,14 +207,14 @@ def print_demo_rows(demo_df):
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Demo kNN BVP: allena su S2-S16 e mostra alcune predizioni sul test set S17."
+            "Demo kNN EDA: allena su S2-S16 e mostra predizioni sul test set S17."
         )
     )
     parser.add_argument(
         "--rows",
         type=int,
-        default=12,
-        help="Numero di righe di S17 da mostrare nella demo.",
+        default=15,
+        help="Numero di finestre di S17 da mostrare nella demo.",
     )
     parser.add_argument(
         "--random-state",
@@ -237,15 +242,13 @@ def main():
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     demo_df.to_csv(DEMO_OUTPUT_FILE, index=False)
 
-    print("Demo predizione stress da BVP")
+    print("Demo predizione stress da EDA")
     print(f"Train: {TRAIN_FILE} ({len(train_df)} finestre)")
     print(f"Test: {TEST_FILE} ({len(test_df)} finestre)")
     print(f"Modello: kNN k={K_NEIGHBORS}, weights={KNN_WEIGHTS}")
     print()
-
     print_metrics(predictions_df)
     print_demo_rows(demo_df)
-
     print(f"\nPredizioni demo salvate in: {DEMO_OUTPUT_FILE}")
 
 

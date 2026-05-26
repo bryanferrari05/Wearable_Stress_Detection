@@ -1,0 +1,55 @@
+# EDA wrist + kNN LOSO summary
+
+Dataset usato: data_features\eda_features_all_60s.csv
+Feature usate (28): eda_mean, eda_std, eda_min, eda_max, eda_range, eda_median, eda_iqr, eda_rms, eda_energy, eda_skew, eda_kurtosis, eda_slope, eda_derivative_mean, eda_derivative_std, eda_derivative_max, eda_tonic_mean, eda_tonic_std, eda_tonic_slope, eda_phasic_mean, eda_phasic_std, eda_phasic_max, eda_phasic_auc, eda_scr_count, eda_scr_rate_per_min, eda_scr_amplitude_mean, eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean
+Feature escluse per evitare leakage: subject, start_sec, end_sec, window_sec, step_sec, original_label, label, label_purity
+Modello usato: KNeighborsClassifier
+n_neighbors = 9
+weights = distance
+Metodo di validazione: Leave-One-Subject-Out
+Scaling: StandardScaler fittato solo sul training fold.
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.8561 (85.61%)
+Precision media sui fold: 0.8175 (81.75%)
+Recall media sui fold: 0.7418 (74.18%)
+F1 media sui fold: 0.7354 (73.54%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.8559 (85.59%)
+Precision aggregata globale: 0.7720 (77.20%)
+Recall aggregata globale: 0.7383 (73.83%)
+F1 aggregata globale: 0.7548 (75.48%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[678  70]
+ [ 84 237]]
+TN=678, FP=70, FN=84, TP=237
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.89      0.91      0.90       748
+           1       0.77      0.74      0.75       321
+
+    accuracy                           0.86      1069
+   macro avg       0.83      0.82      0.83      1069
+weighted avg       0.85      0.86      0.86      1069
+
+
+## Controlli predizioni
+Classi predette globalmente: [0, 1]
+Il modello predice entrambe le classi.
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.5854).
+- S14: accuracy=0.7042, precision=1.0000, recall=0.0455, f1=0.0870, TN=49, FP=0, FN=21, TP=1
+- S17: accuracy=0.7432, precision=0.6667, recall=0.3478, f1=0.4571, TN=47, FP=4, FN=15, TP=8
+- S6: accuracy=0.7222, precision=0.5217, recall=0.5714, f1=0.5455, TN=40, FP=11, FN=9, TP=12
+
+## Nota
+Questa e' la baseline kNN EDA con feature statistiche, toniche, fasiche e SCR estratte nel CSV; il tuning degli iperparametri non e' incluso in questa esecuzione.
