@@ -100,3 +100,29 @@
 - CSV generati dalle demo:
   - `results/demo_predictions_bvp_s17.csv`
   - `results/demo_predictions_eda_s17.csv`
+
+
+## Test EDA feature ridotte
+
+- Script creato: `src/train_eda_knn_loso_reduced.py`
+- Dataset usato: `data_features/eda_features_all_60s.csv`
+- Feature complete: `28`
+- Feature ridotte usate: `16`
+- Feature rimosse per ridondanza: `eda_min, eda_max, eda_median, eda_iqr, eda_rms, eda_energy, eda_tonic_mean, eda_tonic_slope, eda_phasic_mean, eda_phasic_max, eda_scr_rate_per_min, eda_scr_amplitude_mean`
+- Validazione: Leave-One-Subject-Out per soggetto, con `StandardScaler` fittato solo sul training fold.
+- Modello: `KNeighborsClassifier(n_neighbors=9, weights="distance")`
+- Risultati feature ridotte:
+  - Accuracy aggregata: 0.8597 (85.97%)
+  - Precision aggregata: 0.7785 (77.85%)
+  - Recall aggregata: 0.7445 (74.45%)
+  - F1 aggregato: 0.7611 (76.11%)
+  - Confusion matrix aggregata: TN=680, FP=68, FN=82, TP=239
+- Confronto con baseline EDA completa:
+  - Delta accuracy: +0.0038 (0.38%)
+  - Delta precision: +0.0065 (0.65%)
+  - Delta recall: +0.0062 (0.62%)
+  - Delta F1: +0.0063 (0.63%)
+- File generati:
+  - `results/eda_knn_loso_reduced_per_subject.csv`
+  - `results/eda_knn_reduced_summary.txt`
+- Soggetti problematici secondo soglia F1: S14, S17

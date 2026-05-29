@@ -262,9 +262,10 @@
         <li><a href="#validazione">4. Validazione e modello</a></li>
         <li><a href="#risultati">5. Risultati</a></li>
         <li><a href="#importanza">6. Feature piu' importanti</a></li>
-        <li><a href="#interpretazione">7. Interpretazione</a></li>
-        <li><a href="#orale">8. Spiegazione per l'orale</a></li>
-        <li><a href="#file">9. File prodotti</a></li>
+        <li><a href="#ridotte">7. Test feature ridotte</a></li>
+        <li><a href="#interpretazione">8. Interpretazione</a></li>
+        <li><a href="#orale">9. Spiegazione per l'orale</a></li>
+        <li><a href="#file">10. File prodotti</a></li>
       </ul>
     </section>
 
@@ -580,8 +581,112 @@ Fold 15: train = tutti tranne S17, test = S17</pre>
       </div>
     </section>
 
+    <section id="ridotte">
+      <h2>7. Test Feature Ridotte</h2>
+      <p>
+        Dopo il primo test sono state rimosse le feature EDA piu' ridondanti, cioe'
+        quelle identiche, quasi identiche o derivate da altre feature con finestre di
+        lunghezza fissa. Il modello e' stato rieseguito con la stessa procedura:
+        kNN con <code>k=9</code>, <code>weights="distance"</code>,
+        <code>StandardScaler</code> fittato solo sul training fold e validazione
+        Leave-One-Subject-Out.
+      </p>
+
+      <h3>Feature mantenute</h3>
+      <p>
+        La versione ridotta usa <code>16</code> feature invece di <code>28</code>:
+      </p>
+      <pre>eda_mean, eda_std, eda_range, eda_skew, eda_kurtosis,
+eda_slope, eda_derivative_mean, eda_derivative_std, eda_derivative_max,
+eda_tonic_std, eda_phasic_std, eda_phasic_auc, eda_scr_count,
+eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
+
+      <h3>Feature rimosse</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature rimossa</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>eda_min</code>, <code>eda_max</code></td><td>Molto ridondanti con livello globale e range.</td></tr>
+          <tr><td><code>eda_median</code>, <code>eda_rms</code>, <code>eda_tonic_mean</code></td><td>Quasi identiche a <code>eda_mean</code> nel CSV.</td></tr>
+          <tr><td><code>eda_energy</code></td><td>Derivata da RMS con finestre di lunghezza fissa.</td></tr>
+          <tr><td><code>eda_iqr</code></td><td>Molto correlata con <code>eda_std</code>/<code>eda_tonic_std</code>.</td></tr>
+          <tr><td><code>eda_tonic_slope</code></td><td>Quasi identica a <code>eda_slope</code>.</td></tr>
+          <tr><td><code>eda_phasic_mean</code></td><td>Copia scalata di <code>eda_phasic_auc</code>.</td></tr>
+          <tr><td><code>eda_phasic_max</code></td><td>Molto correlata con <code>eda_scr_amplitude_max</code>.</td></tr>
+          <tr><td><code>eda_scr_rate_per_min</code></td><td>Identica a <code>eda_scr_count</code> con finestre da 60 secondi.</td></tr>
+          <tr><td><code>eda_scr_amplitude_mean</code></td><td>Molto correlata con <code>eda_scr_prominence_mean</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Confronto full vs reduced</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Versione</th>
+            <th>Feature</th>
+            <th>Accuracy</th>
+            <th>Precision stress</th>
+            <th>Recall stress</th>
+            <th>F1 stress</th>
+            <th>TN</th>
+            <th>FP</th>
+            <th>FN</th>
+            <th>TP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>EDA completa</td>
+            <td>28</td>
+            <td>85.59%</td>
+            <td>77.20%</td>
+            <td>73.83%</td>
+            <td>75.48%</td>
+            <td>678</td>
+            <td>70</td>
+            <td>84</td>
+            <td>237</td>
+          </tr>
+          <tr>
+            <td>EDA ridotta</td>
+            <td>16</td>
+            <td>85.97%</td>
+            <td>77.85%</td>
+            <td>74.45%</td>
+            <td>76.11%</td>
+            <td>680</td>
+            <td>68</td>
+            <td>82</td>
+            <td>239</td>
+          </tr>
+          <tr>
+            <td>Delta ridotta - completa</td>
+            <td>-12</td>
+            <td>+0.38%</td>
+            <td>+0.65%</td>
+            <td>+0.62%</td>
+            <td>+0.63%</td>
+            <td>+2</td>
+            <td>-2</td>
+            <td>-2</td>
+            <td>+2</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="success">
+        <strong>Conclusione:</strong> togliere le feature ridondanti non peggiora il
+        modello. La versione ridotta migliora leggermente F1, accuracy, precision e
+        recall, quindi e' una baseline EDA piu' compatta e preferibile.
+      </div>
+    </section>
+
     <section id="interpretazione">
-      <h2>7. Interpretazione</h2>
+      <h2>8. Interpretazione</h2>
       <p>
         Il risultato EDA e' forte perche' il segnale e' direttamente collegato alla
         sudorazione e quindi all'attivazione simpatica. Le sole statistiche di livello
@@ -603,7 +708,7 @@ Fold 15: train = tutti tranne S17, test = S17</pre>
     </section>
 
     <section id="orale">
-      <h2>8. Spiegazione Pronta per l'Orale</h2>
+      <h2>9. Spiegazione Pronta per l'Orale</h2>
       <div class="card">
         <p>
           "Per EDA ho usato il segnale di conduttanza cutanea del polso, campionato a
@@ -629,6 +734,12 @@ Fold 15: train = tutti tranne S17, test = S17</pre>
           piu' importanti sono quelle legate alla frequenza e al numero di SCR, quindi
           il modello sta usando informazione fisiologicamente sensata."
         </p>
+        <p>
+          "Poi ho tolto le feature ridondanti, passando da 28 a 16 feature. Il nuovo
+          test LOSO non e' peggiorato: l'accuracy e' salita a 85.97% e l'F1 stress a
+          76.11%. Questo indica che le feature duplicate stavano appesantendo il modello
+          senza aggiungere vera informazione."
+        </p>
       </div>
 
       <div class="warning">
@@ -640,7 +751,7 @@ Fold 15: train = tutti tranne S17, test = S17</pre>
     </section>
 
     <section id="file">
-      <h2>9. File Prodotti o Aggiornati</h2>
+      <h2>10. File Prodotti o Aggiornati</h2>
       <table>
         <thead>
           <tr>
@@ -662,6 +773,10 @@ Fold 15: train = tutti tranne S17, test = S17</pre>
             <td>Training e valutazione kNN LOSO con k=9 e weights=distance.</td>
           </tr>
           <tr>
+            <td><code>src/train_eda_knn_loso_reduced.py</code></td>
+            <td>Training e valutazione kNN LOSO con feature EDA ridotte.</td>
+          </tr>
+          <tr>
             <td><code>data_features/eda_features_all_60s.csv</code></td>
             <td>CSV finale EDA con 1069 finestre e 36 colonne.</td>
           </tr>
@@ -680,6 +795,14 @@ Fold 15: train = tutti tranne S17, test = S17</pre>
           <tr>
             <td><code>results/eda_knn_loso_per_subject.csv</code></td>
             <td>Metriche per soggetto lasciato fuori.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_reduced_summary.txt</code></td>
+            <td>Metriche aggregate e confronto full vs reduced per le feature EDA.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_loso_reduced_per_subject.csv</code></td>
+            <td>Metriche per soggetto lasciato fuori con feature EDA ridotte.</td>
           </tr>
           <tr>
             <td><code>results/report_eda_knn_loso.html</code></td>
