@@ -84,6 +84,11 @@
   - Soggetti problematici secondo soglia F1: S14, S17, S6
   - Questa esecuzione e' la baseline EDA; non include ancora tuning degli iperparametri.
 
+## Report HTML EDA
+
+- File creato: `results/report_eda_knn_loso.html`
+- Contenuto: pipeline EDA completa, segmentazione, feature statistiche/toniche/fasiche/SCR, validazione LOSO, metriche globali, risultati per soggetto, feature piu' importanti e spiegazione pronta per l'orale.
+
 ## Demo predizioni BVP ed EDA
 
 - Script disponibili:

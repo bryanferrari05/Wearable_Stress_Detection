@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report EDA wrist + kNN LOSO</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --paper: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6b7a;
+      --line: #d9dee7;
+      --accent: #0f766e;
+      --accent-soft: #e4f4f1;
+      --warn: #92400e;
+      --warn-soft: #fff7ed;
+      --good: #166534;
+      --good-soft: #ecfdf3;
+      --code: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      padding: 32px 28px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    h2 {
+      margin: 34px 0 14px;
+      font-size: 24px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 8px 0 12px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    code, pre {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+    }
+
+    code {
+      background: #eef2f7;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--code);
+      color: #6ee7b7;
+      padding: 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef2f7;
+      font-weight: 700;
+    }
+
+    ul, ol {
+      padding-left: 24px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 980px;
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .metric {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      margin-top: 4px;
+      color: var(--accent);
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border: 1px solid #b7e3dc;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .warning {
+      background: var(--warn-soft);
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .success {
+      background: var(--good-soft);
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc a {
+      display: block;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .grid, .toc {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      header {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>WESAD EDA wrist + kNN LOSO: report del lavoro svolto</h1>
+    <p class="subtitle">
+      Riassunto della pipeline EDA: estrazione feature da conduttanza cutanea,
+      validazione del CSV, training kNN con Leave-One-Subject-Out e analisi dei
+      risultati globali e per soggetto.
+    </p>
+  </header>
+
+  <main>
+    <section id="sintesi">
+      <h2>Sintesi Finale</h2>
+      <div class="grid">
+        <div class="metric">
+          Dataset finale
+          <strong>1069</strong>
+          <span class="small">finestre, 15 soggetti</span>
+        </div>
+        <div class="metric">
+          Feature EDA
+          <strong>28</strong>
+          <span class="small">statistiche, toniche, fasiche, SCR</span>
+        </div>
+        <div class="metric">
+          Accuracy finale
+          <strong>85.59%</strong>
+          <span class="small">LOSO, k=9, distance</span>
+        </div>
+        <div class="metric">
+          F1 finale
+          <strong>75.48%</strong>
+          <span class="small">classe stress</span>
+        </div>
+      </div>
+
+      <div class="success">
+        <strong>Risultato principale:</strong> la pipeline EDA ottiene
+        <strong>85.59%</strong> di accuracy aggregata e <strong>75.48%</strong> di F1
+        sulla classe stress. Il modello predice entrambe le classi e viene valutato
+        lasciando fuori un soggetto alla volta, quindi senza mescolare finestre dello
+        stesso soggetto tra train e test.
+      </div>
+    </section>
+
+    <section id="indice">
+      <h2>Indice</h2>
+      <ul class="toc">
+        <li><a href="#obiettivo">1. Obiettivo</a></li>
+        <li><a href="#dataset">2. Dataset e segmentazione</a></li>
+        <li><a href="#feature">3. Feature EDA</a></li>
+        <li><a href="#validazione">4. Validazione e modello</a></li>
+        <li><a href="#risultati">5. Risultati</a></li>
+        <li><a href="#importanza">6. Feature piu' importanti</a></li>
+        <li><a href="#interpretazione">7. Interpretazione</a></li>
+        <li><a href="#orale">8. Spiegazione per l'orale</a></li>
+        <li><a href="#file">9. File prodotti</a></li>
+      </ul>
+    </section>
+
+    <section id="obiettivo">
+      <h2>1. Obiettivo</h2>
+      <p>
+        L'obiettivo era costruire una baseline di stress detection usando solo il
+        segnale EDA del polso nel dataset WESAD. EDA significa Electrodermal Activity:
+        misura la conduttanza cutanea, che cambia con l'attivazione del sistema nervoso
+        simpatico. Per questo motivo e' un segnale molto rilevante per distinguere
+        finestre stress da finestre non-stress.
+      </p>
+      <p>
+        La pipeline segue la stessa logica usata per BVP: finestre temporali, feature
+        numeriche, classificatore kNN e validazione Leave-One-Subject-Out.
+      </p>
+    </section>
+
+    <section id="dataset">
+      <h2>2. Dataset e Segmentazione</h2>
+      <table>
+        <tbody>
+          <tr><th>Segnale usato</th><td><code>signal["wrist"]["EDA"]</code></td></tr>
+          <tr><th>Frequenza di campionamento</th><td><code>4 Hz</code></td></tr>
+          <tr><th>Finestra</th><td><code>60 s</code></td></tr>
+          <tr><th>Passo</th><td><code>30 s</code></td></tr>
+          <tr><th>Soggetti</th><td>15 soggetti: da <code>S2</code> a <code>S17</code>, esclusi <code>S1</code> e <code>S12</code></td></tr>
+          <tr><th>Finestre finali</th><td><code>1069</code></td></tr>
+          <tr><th>Distribuzione classi</th><td><code>748</code> non-stress, <code>321</code> stress</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Costruzione della label</h3>
+      <p>
+        Ogni finestra riceve la label con voto di maggioranza sulle label originali.
+        Sono state tenute solo le finestre con purezza minima <code>0.70</code>, cioe'
+        finestre in cui almeno il 70% dei campioni di label appartiene alla stessa
+        condizione.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Label WESAD originale</th>
+            <th>Significato</th>
+            <th>Label binaria usata</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>1</code></td><td>Baseline</td><td><code>0</code> non-stress</td></tr>
+          <tr><td><code>2</code></td><td>Stress</td><td><code>1</code> stress</td></tr>
+          <tr><td><code>3</code></td><td>Amusement</td><td><code>0</code> non-stress</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="feature">
+      <h2>3. Feature EDA Usate</h2>
+      <p>
+        Tutte le feature usate dal modello sono rilevabili dal solo segnale EDA wrist.
+        Non sono state usate feature BVP, HR, temperatura o metadati del soggetto.
+      </p>
+
+      <h3>Statistiche descrittive</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Significato</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>eda_mean</code></td><td>Livello medio della conduttanza nella finestra.</td></tr>
+          <tr><td><code>eda_std</code></td><td>Variabilita' del segnale nella finestra.</td></tr>
+          <tr><td><code>eda_min</code>, <code>eda_max</code>, <code>eda_range</code></td><td>Livello minimo, massimo e ampiezza complessiva.</td></tr>
+          <tr><td><code>eda_median</code>, <code>eda_iqr</code></td><td>Statistiche robuste del livello e della dispersione.</td></tr>
+          <tr><td><code>eda_rms</code>, <code>eda_energy</code></td><td>Misure globali di intensita' del segnale.</td></tr>
+          <tr><td><code>eda_skew</code>, <code>eda_kurtosis</code></td><td>Forma della distribuzione: asimmetria e presenza di code/picchi.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Andamento temporale</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Significato</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>eda_slope</code></td><td>Pendenza complessiva del segnale filtrato nella finestra.</td></tr>
+          <tr><td><code>eda_derivative_mean</code></td><td>Variazione media istante per istante.</td></tr>
+          <tr><td><code>eda_derivative_std</code></td><td>Variabilita' delle variazioni rapide.</td></tr>
+          <tr><td><code>eda_derivative_max</code></td><td>Massimo incremento rapido nella finestra.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Componente tonica, fasica e SCR</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Gruppo</th>
+            <th>Feature</th>
+            <th>Interpretazione</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tonica</td>
+            <td><code>eda_tonic_mean</code>, <code>eda_tonic_std</code>, <code>eda_tonic_slope</code></td>
+            <td>Livello lento di base della conduttanza cutanea.</td>
+          </tr>
+          <tr>
+            <td>Fasica</td>
+            <td><code>eda_phasic_mean</code>, <code>eda_phasic_std</code>, <code>eda_phasic_max</code>, <code>eda_phasic_auc</code></td>
+            <td>Attivazioni rapide sopra il livello tonico, piu' vicine alle risposte da arousal.</td>
+          </tr>
+          <tr>
+            <td>SCR</td>
+            <td><code>eda_scr_count</code>, <code>eda_scr_rate_per_min</code>, <code>eda_scr_amplitude_mean</code>, <code>eda_scr_amplitude_std</code>, <code>eda_scr_amplitude_max</code>, <code>eda_scr_prominence_mean</code></td>
+            <td>Numero, frequenza e ampiezza delle Skin Conductance Responses rilevate come picchi nella componente fasica positiva.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        Il punto fisiologico piu' importante e' questo: durante stress o arousal il
+        segnale EDA tende ad avere piu' risposte fasiche/SCR. Per questo le feature
+        basate su picchi SCR risultano centrali nella classificazione.
+      </div>
+    </section>
+
+    <section id="validazione">
+      <h2>4. Validazione e Modello</h2>
+      <p>
+        Il modello usato e' un <code>KNeighborsClassifier</code> con
+        <code>n_neighbors=9</code> e <code>weights="distance"</code>. Prima del kNN le
+        feature sono standardizzate con <code>StandardScaler</code>.
+      </p>
+
+      <div class="warning">
+        <strong>Controllo anti-leakage:</strong> lo scaler viene fittato solo sul training
+        fold e poi applicato al soggetto lasciato fuori. In questo modo il modello non
+        vede statistiche del soggetto test durante il training.
+      </div>
+
+      <h3>Leave-One-Subject-Out</h3>
+      <p>
+        La valutazione usa Leave-One-Subject-Out: a ogni fold un soggetto intero viene
+        lasciato fuori come test set, mentre gli altri soggetti formano il training set.
+        Questa scelta e' piu' severa di una divisione casuale delle finestre, perche'
+        misura la capacita' di generalizzare a una persona non vista.
+      </p>
+      <pre>Fold 1: train = tutti tranne S2,  test = S2
+Fold 2: train = tutti tranne S3,  test = S3
+...
+Fold 15: train = tutti tranne S17, test = S17</pre>
+
+      <h3>Feature escluse dal training</h3>
+      <p>
+        Le colonne <code>subject</code>, <code>start_sec</code>, <code>end_sec</code>,
+        <code>window_sec</code>, <code>step_sec</code>, <code>original_label</code>,
+        <code>label</code> e <code>label_purity</code> sono state escluse. Sono metadati
+        o target, quindi usarle come input avrebbe introdotto leakage o informazione non
+        fisiologica.
+      </p>
+    </section>
+
+    <section id="risultati">
+      <h2>5. Risultati</h2>
+      <h3>Metriche aggregate globali</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Metrica</th>
+            <th>Valore</th>
+            <th>Commento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Accuracy aggregata</td><td>85.59%</td><td>Quota totale di finestre classificate correttamente.</td></tr>
+          <tr><td>Precision stress</td><td>77.20%</td><td>Quando predice stress, nel 77.20% dei casi la finestra e' davvero stress.</td></tr>
+          <tr><td>Recall stress</td><td>73.83%</td><td>Il modello recupera 237 finestre stress su 321.</td></tr>
+          <tr><td>F1 stress</td><td>75.48%</td><td>Bilanciamento tra precision e recall sulla classe stress.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Metriche medie sui fold</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Accuracy media</th>
+            <th>Precision media</th>
+            <th>Recall media</th>
+            <th>F1 medio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>85.61%</td>
+            <td>81.75%</td>
+            <td>74.18%</td>
+            <td>73.54%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Confusion matrix aggregata</h3>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Predetto 0 non-stress</th>
+            <th>Predetto 1 stress</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Vero 0 non-stress</th>
+            <td>TN = 678</td>
+            <td>FP = 70</td>
+          </tr>
+          <tr>
+            <th>Vero 1 stress</th>
+            <td>FN = 84</td>
+            <td>TP = 237</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        La matrice mostra che il modello riconosce correttamente <code>237</code>
+        finestre stress e ne perde <code>84</code>. Sulla classe non-stress classifica
+        correttamente <code>678</code> finestre e produce <code>70</code> falsi positivi.
+      </p>
+
+      <h3>Risultati per soggetto</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Soggetto lasciato fuori</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1</th>
+            <th>TN</th>
+            <th>FP</th>
+            <th>FN</th>
+            <th>TP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>S10</td><td>93.33%</td><td>100.00%</td><td>79.17%</td><td>88.37%</td><td>51</td><td>0</td><td>5</td><td>19</td></tr>
+          <tr><td>S11</td><td>78.87%</td><td>60.00%</td><td>95.45%</td><td>73.68%</td><td>35</td><td>14</td><td>1</td><td>21</td></tr>
+          <tr><td>S13</td><td>80.28%</td><td>60.00%</td><td>100.00%</td><td>75.00%</td><td>36</td><td>14</td><td>0</td><td>21</td></tr>
+          <tr><td>S14</td><td>70.42%</td><td>100.00%</td><td>4.55%</td><td>8.70%</td><td>49</td><td>0</td><td>21</td><td>1</td></tr>
+          <tr><td>S15</td><td>92.96%</td><td>90.48%</td><td>86.36%</td><td>88.37%</td><td>47</td><td>2</td><td>3</td><td>19</td></tr>
+          <tr><td>S16</td><td>91.67%</td><td>100.00%</td><td>72.73%</td><td>84.21%</td><td>50</td><td>0</td><td>6</td><td>16</td></tr>
+          <tr><td>S17</td><td>74.32%</td><td>66.67%</td><td>34.78%</td><td>45.71%</td><td>47</td><td>4</td><td>15</td><td>8</td></tr>
+          <tr><td>S2</td><td>92.54%</td><td>93.75%</td><td>78.95%</td><td>85.71%</td><td>47</td><td>1</td><td>4</td><td>15</td></tr>
+          <tr><td>S3</td><td>79.41%</td><td>62.50%</td><td>75.00%</td><td>68.18%</td><td>39</td><td>9</td><td>5</td><td>15</td></tr>
+          <tr><td>S4</td><td>95.77%</td><td>100.00%</td><td>85.71%</td><td>92.31%</td><td>50</td><td>0</td><td>3</td><td>18</td></tr>
+          <tr><td>S5</td><td>81.94%</td><td>64.29%</td><td>85.71%</td><td>73.47%</td><td>41</td><td>10</td><td>3</td><td>18</td></tr>
+          <tr><td>S6</td><td>72.22%</td><td>52.17%</td><td>57.14%</td><td>54.55%</td><td>40</td><td>11</td><td>9</td><td>12</td></tr>
+          <tr><td>S7</td><td>90.14%</td><td>88.89%</td><td>76.19%</td><td>82.05%</td><td>48</td><td>2</td><td>5</td><td>16</td></tr>
+          <tr><td>S8</td><td>94.37%</td><td>100.00%</td><td>80.95%</td><td>89.47%</td><td>50</td><td>0</td><td>4</td><td>17</td></tr>
+          <tr><td>S9</td><td>95.83%</td><td>87.50%</td><td>100.00%</td><td>93.33%</td><td>48</td><td>3</td><td>0</td><td>21</td></tr>
+        </tbody>
+      </table>
+
+      <div class="warning">
+        <strong>Soggetti piu' difficili:</strong> S14, S17 e S6 sono sotto la soglia di
+        attenzione definita nel summary. In particolare S14 ha precision alta ma recall
+        molto bassa: predice quasi sempre non-stress e perde molti esempi stress.
+      </div>
+    </section>
+
+    <section id="importanza">
+      <h2>6. Feature Piu' Importanti</h2>
+      <p>
+        Il kNN non produce una feature importance nativa. Per stimarla e' stata usata
+        una permutation importance sui fold LOSO: per ogni feature, i valori nel test
+        fold vengono mescolati e si misura quanto cala l'F1. Piu' il calo e' alto, piu'
+        quella feature e' utile al modello.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Posizione</th>
+            <th>Feature</th>
+            <th>Calo medio F1</th>
+            <th>Interpretazione</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>eda_scr_rate_per_min</code></td><td>0.0897</td><td>Frequenza delle risposte SCR nella finestra.</td></tr>
+          <tr><td>2</td><td><code>eda_scr_count</code></td><td>0.0847</td><td>Numero di risposte SCR rilevate.</td></tr>
+          <tr><td>3</td><td><code>eda_skew</code></td><td>0.0411</td><td>Asimmetria della distribuzione, spesso influenzata da picchi fasici.</td></tr>
+          <tr><td>4</td><td><code>eda_phasic_mean</code></td><td>0.0232</td><td>Livello medio della componente fasica positiva.</td></tr>
+          <tr><td>5</td><td><code>eda_phasic_auc</code></td><td>0.0228</td><td>Area totale della risposta fasica positiva.</td></tr>
+          <tr><td>6</td><td><code>eda_range</code></td><td>0.0169</td><td>Ampiezza complessiva del segnale nella finestra.</td></tr>
+          <tr><td>7</td><td><code>eda_scr_amplitude_max</code></td><td>0.0161</td><td>Ampiezza massima delle risposte SCR.</td></tr>
+          <tr><td>8</td><td><code>eda_scr_amplitude_std</code></td><td>0.0159</td><td>Variabilita' delle ampiezze SCR.</td></tr>
+          <tr><td>9</td><td><code>eda_phasic_max</code></td><td>0.0149</td><td>Picco massimo della componente fasica.</td></tr>
+          <tr><td>10</td><td><code>eda_phasic_std</code></td><td>0.0138</td><td>Variabilita' della componente fasica positiva.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        Le prime posizioni confermano che il modello usa soprattutto informazione
+        fasica/SCR. Questo e' coerente con la fisiologia dell'EDA: lo stress tende a
+        produrre risposte elettrodermiche piu' frequenti o piu' marcate.
+      </div>
+    </section>
+
+    <section id="interpretazione">
+      <h2>7. Interpretazione</h2>
+      <p>
+        Il risultato EDA e' forte perche' il segnale e' direttamente collegato alla
+        sudorazione e quindi all'attivazione simpatica. Le sole statistiche di livello
+        sono utili, ma la parte piu' discriminante e' la componente fasica: picchi,
+        frequenza delle SCR e area delle risposte rapide.
+      </p>
+      <p>
+        La differenza tra precision e recall e' abbastanza bilanciata: la precision
+        stress e' <code>77.20%</code>, la recall stress e' <code>73.83%</code>. Quindi il
+        modello non sta semplicemente predicendo una classe sola; riconosce entrambe le
+        classi e mantiene un compromesso ragionevole tra falsi positivi e falsi negativi.
+      </p>
+      <p>
+        La variabilita' per soggetto resta il limite principale. Alcuni soggetti, come
+        S14 e S17, hanno pattern EDA meno simili agli altri soggetti del training fold.
+        Questo e' normale in una validazione LOSO, perche' la risposta elettrodermica e'
+        molto personale.
+      </p>
+    </section>
+
+    <section id="orale">
+      <h2>8. Spiegazione Pronta per l'Orale</h2>
+      <div class="card">
+        <p>
+          "Per EDA ho usato il segnale di conduttanza cutanea del polso, campionato a
+          4 Hz. Ho mantenuto la stessa segmentazione usata per BVP: finestre da 60
+          secondi con passo di 30 secondi. Ogni finestra e' stata etichettata con voto di
+          maggioranza sulle label WESAD, tenendo solo finestre con purezza almeno 70%."
+        </p>
+        <p>
+          "Da ogni finestra ho estratto 28 feature, tutte derivate dal solo EDA:
+          statistiche descrittive, pendenza e derivate, componente tonica, componente
+          fasica e feature SCR. Le SCR sono le risposte di conduttanza cutanea, cioe'
+          picchi nella componente fasica, e sono molto informative per lo stress."
+        </p>
+        <p>
+          "Il modello e' un kNN con k=9 e pesi distance. La valutazione e' stata fatta
+          con Leave-One-Subject-Out: ogni volta lascio fuori un soggetto intero e alleno
+          sugli altri. Inoltre lo StandardScaler viene fittato solo sul training fold,
+          quindi non c'e' leakage dal soggetto test."
+        </p>
+        <p>
+          "Il risultato finale e' 85.59% di accuracy aggregata e 75.48% di F1 sulla
+          classe stress. La confusion matrix e' TN=678, FP=70, FN=84, TP=237. Le feature
+          piu' importanti sono quelle legate alla frequenza e al numero di SCR, quindi
+          il modello sta usando informazione fisiologicamente sensata."
+        </p>
+      </div>
+
+      <div class="warning">
+        <strong>Limite da dichiarare:</strong> questa e' una baseline EDA con kNN e non
+        include ancora tuning degli iperparametri o una decomposizione EDA clinica
+        avanzata. Inoltre la risposta EDA varia molto tra soggetti, quindi alcuni fold
+        LOSO possono essere piu' difficili.
+      </div>
+    </section>
+
+    <section id="file">
+      <h2>9. File Prodotti o Aggiornati</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Contenuto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/extract_eda_features_all.py</code></td>
+            <td>Estrazione EDA con feature statistiche, toniche, fasiche e SCR.</td>
+          </tr>
+          <tr>
+            <td><code>src/validate_eda_csv.py</code></td>
+            <td>Validazione del CSV EDA e controllo di allineamento con le finestre BVP.</td>
+          </tr>
+          <tr>
+            <td><code>src/train_eda_knn_loso.py</code></td>
+            <td>Training e valutazione kNN LOSO con k=9 e weights=distance.</td>
+          </tr>
+          <tr>
+            <td><code>data_features/eda_features_all_60s.csv</code></td>
+            <td>CSV finale EDA con 1069 finestre e 36 colonne.</td>
+          </tr>
+          <tr>
+            <td><code>data_features/eda_features_train_s2_s16_60s.csv</code></td>
+            <td>Split train usato dalle demo, soggetti S2-S16 escluso S17.</td>
+          </tr>
+          <tr>
+            <td><code>data_features/eda_features_test_s17_60s.csv</code></td>
+            <td>Split demo per il soggetto S17.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_summary.txt</code></td>
+            <td>Metriche aggregate, confusion matrix, classification report e note.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_loso_per_subject.csv</code></td>
+            <td>Metriche per soggetto lasciato fuori.</td>
+          </tr>
+          <tr>
+            <td><code>results/report_eda_knn_loso.html</code></td>
+            <td>Questo report HTML.</td>
+          </tr>
+          <tr>
+            <td><code>PROGRESS.md</code></td>
+            <td>Registro sintetico dello stato del progetto.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
