@@ -263,9 +263,10 @@
         <li><a href="#risultati">5. Risultati</a></li>
         <li><a href="#importanza">6. Feature piu' importanti</a></li>
         <li><a href="#ridotte">7. Test feature ridotte</a></li>
-        <li><a href="#interpretazione">8. Interpretazione</a></li>
-        <li><a href="#orale">9. Spiegazione per l'orale</a></li>
-        <li><a href="#file">10. File prodotti</a></li>
+        <li><a href="#baseline-soggetto">8. Baseline soggetto</a></li>
+        <li><a href="#interpretazione">9. Interpretazione</a></li>
+        <li><a href="#orale">10. Spiegazione per l'orale</a></li>
+        <li><a href="#file">11. File prodotti</a></li>
       </ul>
     </section>
 
@@ -685,8 +686,145 @@ eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
       </div>
     </section>
 
+    <section id="baseline-soggetto">
+      <h2>8. Normalizzazione Rispetto alla Baseline del Soggetto</h2>
+      <p>
+        Il passo successivo e' stato rendere le feature piu' confrontabili tra
+        persone diverse. L'EDA e' un segnale molto soggettivo: una persona puo'
+        avere valori naturalmente piu' alti di un'altra anche quando non e'
+        stressata. Per questo motivo non basta guardare solo il valore assoluto
+        del segnale.
+      </p>
+
+      <div class="card">
+        <p>
+          Esempio semplice:
+        </p>
+        <pre>Soggetto A in baseline: EDA = 1
+Soggetto A in stress:   EDA = 2
+
+Soggetto B in baseline: EDA = 6
+Soggetto B in stress:   EDA = 7</pre>
+        <p>
+          Il soggetto B ha valori piu' alti anche in baseline, quindi potrebbe
+          sembrare piu' stressato anche quando non lo e'. La cosa piu' utile non e'
+          solo sapere quanto e' alto il segnale, ma quanto cambia rispetto al livello
+          normale della stessa persona.
+        </p>
+      </div>
+
+      <p>
+        Per ogni soggetto abbiamo quindi usato le finestre di baseline
+        (<code>original_label=1</code>) per stimare il suo livello normale. Poi, per
+        ogni finestra, abbiamo calcolato quanto il valore si discosta da quella
+        baseline personale.
+      </p>
+      <pre>baseline_delta = valore_finestra - media_baseline_soggetto
+baseline_zscore = (valore_finestra - media_baseline_soggetto) / std_baseline_soggetto</pre>
+
+      <div class="warning">
+        <strong>Assunzione metodologica da dichiarare:</strong> questa tecnica assume
+        che sia disponibile una breve fase iniziale di baseline per il soggetto, cioe'
+        un momento in cui sappiamo che non e' stressato. E' una calibrazione personale.
+        Non vengono usate finestre stress per costruire il riferimento.
+      </div>
+
+      <h3>Feature normalizzate</h3>
+      <p>
+        Sono state normalizzate rispetto alla baseline le feature piu' interpretabili
+        sulla scala personale:
+      </p>
+      <pre>eda_mean, eda_std, eda_range, eda_tonic_std, eda_phasic_std,
+eda_phasic_auc, eda_scr_count, eda_scr_amplitude_std,
+eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
+
+      <h3>Feature set testati</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature set</th>
+            <th>Numero feature</th>
+            <th>Idea</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>reduced_absolute_16</code></td><td>16</td><td>Replica della versione EDA ridotta.</td></tr>
+          <tr><td><code>baseline_delta_10</code></td><td>10</td><td>Solo differenze rispetto alla baseline personale.</td></tr>
+          <tr><td><code>baseline_zscore_10</code></td><td>10</td><td>Solo z-score rispetto alla baseline personale.</td></tr>
+          <tr><td><code>reduced_plus_delta_26</code></td><td>26</td><td>Feature ridotte + delta baseline.</td></tr>
+          <tr><td><code>reduced_plus_zscore_26</code></td><td>26</td><td>Feature ridotte + z-score baseline.</td></tr>
+          <tr><td><code>reduced_plus_delta_zscore_36</code></td><td>36</td><td>Feature ridotte + delta + z-score baseline.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Risultati migliori</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Versione</th>
+            <th>Feature</th>
+            <th>Accuracy</th>
+            <th>Precision stress</th>
+            <th>Recall stress</th>
+            <th>F1 stress</th>
+            <th>TN</th>
+            <th>FP</th>
+            <th>FN</th>
+            <th>TP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>EDA ridotta</td>
+            <td>16</td>
+            <td>85.97%</td>
+            <td>77.85%</td>
+            <td>74.45%</td>
+            <td>76.11%</td>
+            <td>680</td>
+            <td>68</td>
+            <td>82</td>
+            <td>239</td>
+          </tr>
+          <tr>
+            <td>EDA baseline-normalized</td>
+            <td>36</td>
+            <td>89.52%</td>
+            <td>88.28%</td>
+            <td>75.08%</td>
+            <td>81.14%</td>
+            <td>716</td>
+            <td>32</td>
+            <td>80</td>
+            <td>241</td>
+          </tr>
+          <tr>
+            <td>Delta normalized - ridotta</td>
+            <td>+20</td>
+            <td>+3.55%</td>
+            <td>+10.43%</td>
+            <td>+0.63%</td>
+            <td>+5.03%</td>
+            <td>+36</td>
+            <td>-36</td>
+            <td>-2</td>
+            <td>+2</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="success">
+        <strong>Conclusione:</strong> la normalizzazione rispetto alla baseline personale
+        e' il miglioramento piu' forte ottenuto finora su EDA. Il modello diventa molto
+        piu' preciso quando predice stress e riduce drasticamente i falsi positivi.
+        In termini semplici: il modello non guarda solo "quanto e' alto" il segnale,
+        ma quanto e' diverso dal livello normale di quella persona.
+      </div>
+
+    </section>
+
     <section id="interpretazione">
-      <h2>8. Interpretazione</h2>
+      <h2>9. Interpretazione</h2>
       <p>
         Il risultato EDA e' forte perche' il segnale e' direttamente collegato alla
         sudorazione e quindi all'attivazione simpatica. Le sole statistiche di livello
@@ -708,7 +846,7 @@ eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
     </section>
 
     <section id="orale">
-      <h2>9. Spiegazione Pronta per l'Orale</h2>
+      <h2>10. Spiegazione Pronta per l'Orale</h2>
       <div class="card">
         <p>
           "Per EDA ho usato il segnale di conduttanza cutanea del polso, campionato a
@@ -740,6 +878,22 @@ eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
           76.11%. Questo indica che le feature duplicate stavano appesantendo il modello
           senza aggiungere vera informazione."
         </p>
+        <p>
+          "Il miglioramento successivo e' stato usare una baseline personale del
+          soggetto. L'EDA cambia molto da persona a persona: alcuni soggetti hanno valori
+          naturalmente piu' alti, altri piu' bassi. Quindi abbiamo calcolato il livello
+          normale di ogni soggetto usando solo le finestre baseline e poi abbiamo misurato
+          quanto ogni finestra si discosta da quel livello. In questo modo il modello non
+          guarda solo il valore assoluto dell'EDA, ma il cambiamento rispetto alla
+          condizione normale della persona. Con questa normalizzazione l'accuracy e'
+          arrivata a 89.52% e l'F1 stress a 81.14%."
+        </p>
+        <p>
+          "Questa scelta richiede una breve fase iniziale di calibrazione baseline, cioe'
+          un momento in cui il soggetto non e' stressato. E' una cosa plausibile in un
+          sistema wearable: prima si registra il livello normale della persona, poi si
+          confrontano le finestre successive con quel riferimento."
+        </p>
       </div>
 
       <div class="warning">
@@ -751,7 +905,7 @@ eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
     </section>
 
     <section id="file">
-      <h2>10. File Prodotti o Aggiornati</h2>
+      <h2>11. File Prodotti o Aggiornati</h2>
       <table>
         <thead>
           <tr>
@@ -775,6 +929,10 @@ eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
           <tr>
             <td><code>src/train_eda_knn_loso_reduced.py</code></td>
             <td>Training e valutazione kNN LOSO con feature EDA ridotte.</td>
+          </tr>
+          <tr>
+            <td><code>src/train_eda_knn_loso_baseline_norm.py</code></td>
+            <td>Test LOSO con feature EDA normalizzate rispetto alla baseline personale del soggetto.</td>
           </tr>
           <tr>
             <td><code>data_features/eda_features_all_60s.csv</code></td>
@@ -803,6 +961,18 @@ eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean</pre>
           <tr>
             <td><code>results/eda_knn_loso_reduced_per_subject.csv</code></td>
             <td>Metriche per soggetto lasciato fuori con feature EDA ridotte.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_baseline_norm_summary.txt</code></td>
+            <td>Risultati del test con normalizzazione rispetto alla baseline del soggetto.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_baseline_norm_results.csv</code></td>
+            <td>Confronto tra feature assolute, delta baseline e z-score baseline.</td>
+          </tr>
+          <tr>
+            <td><code>results/eda_knn_baseline_norm_best_per_subject.csv</code></td>
+            <td>Metriche per soggetto della migliore configurazione baseline-normalized.</td>
           </tr>
           <tr>
             <td><code>results/report_eda_knn_loso.html</code></td>

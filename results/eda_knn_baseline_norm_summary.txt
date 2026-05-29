@@ -1,0 +1,42 @@
+# EDA baseline-normalized feature test
+
+Dataset usato: data_features\eda_features_all_60s.csv
+Validazione: Leave-One-Subject-Out.
+Scaling: StandardScaler fittato solo sul training fold.
+Modello: KNeighborsClassifier(n_neighbors=9, weights='distance')
+
+## Assunzione metodologica
+Le feature normalizzate rispetto alla baseline usano solo finestre con `original_label=1` dello stesso soggetto per stimare media e deviazione standard personali. Questo equivale ad assumere una fase di calibrazione baseline disponibile anche per il soggetto test; non usa finestre stress per costruire il riferimento.
+
+Numero soggetti: 15
+Numero campioni: 1069
+
+## Migliore configurazione
+Feature set: reduced_plus_delta_zscore_36
+Numero feature: 36
+Accuracy aggregata: 0.8952 (89.52%)
+Precision aggregata: 0.8828 (88.28%)
+Recall aggregata: 0.7508 (75.08%)
+F1 aggregato: 0.8114 (81.14%)
+Confusion matrix: TN=716, FP=32, FN=80, TP=241
+
+## Confronto con riferimenti precedenti
+EDA completa 28 feature: F1=0.7548 (75.48%), Accuracy=0.8559 (85.59%)
+EDA ridotta 16 feature precedente: F1=0.7611 (76.11%), Accuracy=0.8597 (85.97%)
+Delta F1 migliore - ridotta precedente: +0.0503 (5.03%)
+Delta accuracy migliore - ridotta precedente: +0.0355 (3.55%)
+
+## Controllo replica feature ridotte
+Feature set reduced_absolute_16 in questo script: F1=0.7611 (76.11%), Accuracy=0.8597 (85.97%)
+
+## Tutti i risultati
+                 feature_set  n_features  aggregate_accuracy  aggregate_precision  aggregate_recall  aggregate_f1  tn  fp  fn  tp
+reduced_plus_delta_zscore_36          36            0.895229             0.882784          0.750779      0.811448 716  32  80 241
+       reduced_plus_delta_26          26            0.886810             0.828947          0.785047      0.806400 696  52  69 252
+      reduced_plus_zscore_26          26            0.886810             0.887597          0.713396      0.791019 719  29  92 229
+           baseline_delta_10          10            0.866230             0.768072          0.794393      0.781011 671  77  66 255
+         reduced_absolute_16          16            0.859682             0.778502          0.744548      0.761146 680  68  82 239
+          baseline_zscore_10          10            0.852198             0.817121          0.654206      0.726644 701  47 111 210
+
+## Interpretazione
+La normalizzazione rispetto alla baseline personale migliora il F1 rispetto alla versione ridotta precedente. Il beneficio indica che rimuovere parte della variabilita' individuale aiuta il kNN in LOSO.

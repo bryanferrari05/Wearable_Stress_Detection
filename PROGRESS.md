@@ -126,3 +126,23 @@
   - `results/eda_knn_loso_reduced_per_subject.csv`
   - `results/eda_knn_reduced_summary.txt`
 - Soggetti problematici secondo soglia F1: S14, S17
+
+
+## Test EDA normalizzazione baseline soggetto
+
+- Script creato: `src/train_eda_knn_loso_baseline_norm.py`
+- Dataset usato: `data_features/eda_features_all_60s.csv`
+- Assunzione: baseline personale disponibile per ogni soggetto, usando solo finestre con `original_label=1`.
+- Feature set testati: `reduced_absolute_16`, `baseline_delta_10`, `baseline_zscore_10`, `reduced_plus_delta_26`, `reduced_plus_zscore_26`, `reduced_plus_delta_zscore_36`
+- Migliore feature set: `reduced_plus_delta_zscore_36` con `36` feature.
+- Risultati migliori:
+  - Accuracy aggregata: 0.8952 (89.52%)
+  - Precision aggregata: 0.8828 (88.28%)
+  - Recall aggregata: 0.7508 (75.08%)
+  - F1 aggregato: 0.8114 (81.14%)
+  - Confusion matrix: TN=716, FP=32, FN=80, TP=241
+- Delta F1 vs EDA ridotta 16 feature precedente: +0.0503 (5.03%)
+- File generati:
+  - `results/eda_knn_baseline_norm_results.csv`
+  - `results/eda_knn_baseline_norm_best_per_subject.csv`
+  - `results/eda_knn_baseline_norm_summary.txt`
