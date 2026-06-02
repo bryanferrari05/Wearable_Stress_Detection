@@ -146,3 +146,70 @@
   - `results/eda_knn_baseline_norm_results.csv`
   - `results/eda_knn_baseline_norm_best_per_subject.csv`
   - `results/eda_knn_baseline_norm_summary.txt`
+
+## Passo 10 - Estrazione feature ECG chest
+
+- Script creati:
+  - `src/extract_ecg_chest_features_all.py`
+  - `src/validate_ecg_chest_csv.py`
+- Segnale usato: `signal["chest"]["ECG"]`, campionato a `700 Hz`.
+- Segmentazione coerente con BVP/EDA: finestre di `60 s`, passo di `30 s`, purezza label minima `0.70`.
+- Feature estratte: statistiche sul segnale ECG filtrato bandpass, derivate, R-peak, RR interval, heart rate e HRV time-domain semplice.
+- File CSV attesi dopo l'estrazione:
+  - `data_features/ecg_chest_features_all_60s.csv`
+  - `data_features/ecg_chest_features_train_s2_s16_60s.csv`
+  - `data_features/ecg_chest_features_test_s17_60s.csv`
+- Validazione prevista: schema colonne, label, purezza, NaN/infinito, coerenza range/rate e allineamento finestre con il CSV BVP se presente.
+- Nota esecuzione locale: gli script compilano correttamente, ma in questo workspace visibile non sono presenti `data_raw/`, `WESAD/` o cartelle soggetto WESAD da cui generare subito i CSV.
+
+## Passo 11 - ECG chest + Random Forest LOSO
+
+- Script creato: `src/train_ecg_chest_rf_loso.py`
+- Dataset usato: `data_features/ecg_chest_features_all_60s.csv`
+- Feature usate: `ecg_mean, ecg_std, ecg_min, ecg_max, ecg_range, ecg_median, ecg_iqr, ecg_rms, ecg_energy, ecg_skew, ecg_kurtosis, ecg_derivative_mean, ecg_derivative_std, ecg_derivative_max_abs, ecg_r_peak_count, ecg_valid_rr_count, ecg_r_peak_rate_per_min, ecg_r_peak_prominence_mean, ecg_r_peak_prominence_std, ecg_rr_mean, ecg_rr_std, ecg_rr_min, ecg_rr_max, ecg_hr_mean, ecg_hr_std, ecg_hr_min, ecg_hr_max, ecg_hr_range, ecg_rmssd, ecg_sdnn, ecg_nn50_count, ecg_pnn50, ecg_cvnn`
+- Validazione: Leave-One-Subject-Out per soggetto.
+- Modello baseline: `RandomForestClassifier(n_estimators=300, min_samples_leaf=2, class_weight="balanced", random_state=42)`
+- Scaling: non usato, perche' Random Forest non richiede `StandardScaler`.
+- Risultati principali:
+  - Accuracy media fold: 0.7493 (74.93%)
+  - F1 media fold: 0.5480 (54.80%)
+  - Accuracy aggregata globale: 0.7484 (74.84%)
+  - F1 aggregata globale: 0.5943 (59.43%)
+  - Confusion matrix aggregata: TN=603, FP=145, FN=124, TP=197
+- File generati:
+  - `results/ecg_chest_rf_loso_per_subject.csv`
+  - `results/ecg_chest_rf_feature_importance.csv`
+  - `results/ecg_chest_rf_summary.txt`
+- Osservazioni:
+  - Il modello predice entrambe le classi.
+  - Soggetti problematici secondo soglia F1: S15, S2, S4, S6
+  - Questa esecuzione e' la baseline Random Forest ECG chest; non include ancora tuning degli iperparametri.
+
+
+## Passo 12 - ECG chest RF baseline normalization
+
+- Script creato: `src/train_ecg_chest_rf_baseline_norm.py`
+- Dataset usato: `data_features/ecg_chest_features_all_60s.csv`
+- Assunzione: baseline personale disponibile per ogni soggetto, usando solo finestre con `original_label=1`.
+- Modello: `RandomForestClassifier(n_estimators=300, min_samples_leaf=2, class_weight="balanced", random_state=42)`
+- Soglia di classificazione: `0.5`.
+- Pulizia/scarto finestre: non applicata.
+- Feature set testati: `absolute_33`, `baseline_delta_12`, `baseline_zscore_12`, `absolute_plus_delta_45`, `absolute_plus_zscore_45`, `absolute_plus_delta_zscore_57`.
+- Migliore feature set: `baseline_zscore_12` con `12` feature.
+- Risultati migliori:
+  - Accuracy aggregata: 0.8644 (86.44%)
+  - Precision aggregata: 0.8308 (83.08%)
+  - Recall aggregata: 0.6885 (68.85%)
+  - F1 aggregato: 0.7530 (75.30%)
+  - Confusion matrix: TN=703, FP=45, FN=100, TP=221
+- Delta F1 vs baseline ECG RF precedente: +0.1587 (15.87%)
+- File generati:
+  - `results/ecg_chest_rf_baseline_norm_results.csv`
+  - `results/ecg_chest_rf_baseline_norm_best_per_subject.csv`
+  - `results/ecg_chest_rf_baseline_norm_best_feature_importance.csv`
+  - `results/ecg_chest_rf_baseline_norm_summary.txt`
+
+## Report HTML ECG chest
+
+- File creato: `results/report_ecg_chest_rf_baseline_norm.html`
+- Contenuto: pipeline ECG chest completa, conteggio feature, normalizzazione baseline personale, confronto Random Forest assoluta vs baseline-normalized, confusion matrix, falsi negativi, feature importance e spiegazione pronta per l'orale.

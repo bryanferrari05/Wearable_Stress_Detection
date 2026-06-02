@@ -1,0 +1,77 @@
+# ECG chest + Random Forest LOSO summary
+
+Dataset usato: data_features\ecg_chest_features_all_60s.csv
+Feature usate (33): ecg_mean, ecg_std, ecg_min, ecg_max, ecg_range, ecg_median, ecg_iqr, ecg_rms, ecg_energy, ecg_skew, ecg_kurtosis, ecg_derivative_mean, ecg_derivative_std, ecg_derivative_max_abs, ecg_r_peak_count, ecg_valid_rr_count, ecg_r_peak_rate_per_min, ecg_r_peak_prominence_mean, ecg_r_peak_prominence_std, ecg_rr_mean, ecg_rr_std, ecg_rr_min, ecg_rr_max, ecg_hr_mean, ecg_hr_std, ecg_hr_min, ecg_hr_max, ecg_hr_range, ecg_rmssd, ecg_sdnn, ecg_nn50_count, ecg_pnn50, ecg_cvnn
+Feature escluse per evitare leakage: subject, start_sec, end_sec, window_sec, step_sec, original_label, label, label_purity
+Modello usato: RandomForestClassifier
+n_estimators = 300
+max_depth = None
+min_samples_leaf = 2
+class_weight = balanced
+random_state = 42
+Metodo di validazione: Leave-One-Subject-Out
+Scaling: non usato, perche' Random Forest non richiede StandardScaler.
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.7493 (74.93%)
+Precision media sui fold: 0.6465 (64.65%)
+Recall media sui fold: 0.6012 (60.12%)
+F1 media sui fold: 0.5480 (54.80%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.7484 (74.84%)
+Precision aggregata globale: 0.5760 (57.60%)
+Recall aggregata globale: 0.6137 (61.37%)
+F1 aggregata globale: 0.5943 (59.43%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[603 145]
+ [124 197]]
+TN=603, FP=145, FN=124, TP=197
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.83      0.81      0.82       748
+           1       0.58      0.61      0.59       321
+
+    accuracy                           0.75      1069
+   macro avg       0.70      0.71      0.71      1069
+weighted avg       0.75      0.75      0.75      1069
+
+
+## Controlli predizioni
+Classi predette globalmente: [0, 1]
+Il modello predice entrambe le classi.
+
+## Top feature Random Forest
+                   feature  mean_importance  std_importance
+              ecg_kurtosis         0.082546        0.010491
+                ecg_median         0.077478        0.007573
+                 ecg_rmssd         0.074899        0.009891
+                 ecg_pnn50         0.062153        0.011953
+                ecg_energy         0.060863        0.008069
+                  ecg_skew         0.057555        0.008942
+                   ecg_rms         0.057285        0.007401
+                   ecg_std         0.047648        0.007272
+                   ecg_iqr         0.039351        0.006962
+ ecg_r_peak_prominence_std         0.031683        0.003222
+            ecg_nn50_count         0.028326        0.004813
+               ecg_rr_mean         0.028285        0.004384
+        ecg_derivative_std         0.028057        0.003219
+ecg_r_peak_prominence_mean         0.027431        0.003622
+               ecg_hr_mean         0.026565        0.003551
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.3980).
+- S15: accuracy=0.5211, precision=0.2857, recall=0.3636, f1=0.3200, TN=29, FP=20, FN=14, TP=8
+- S2: accuracy=0.7313, precision=1.0000, recall=0.0526, f1=0.1000, TN=48, FP=0, FN=18, TP=1
+- S4: accuracy=0.7042, precision=0.0000, recall=0.0000, f1=0.0000, TN=50, FP=0, FN=21, TP=0
+- S6: accuracy=0.7083, precision=0.0000, recall=0.0000, f1=0.0000, TN=51, FP=0, FN=21, TP=0
+
+## Nota
+Questa e' la baseline ECG chest con Random Forest. Il modello usa solo feature estratte dal segnale ECG chest e non include ancora tuning degli iperparametri.

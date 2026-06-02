@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report ECG chest + Random Forest LOSO</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --paper: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6b7a;
+      --line: #d9dee7;
+      --accent: #0f766e;
+      --accent-soft: #e4f4f1;
+      --warn: #92400e;
+      --warn-soft: #fff7ed;
+      --good: #166534;
+      --good-soft: #ecfdf3;
+      --bad: #991b1b;
+      --bad-soft: #fef2f2;
+      --code: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      padding: 32px 28px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    h2 {
+      margin: 34px 0 14px;
+      font-size: 24px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 8px 0 12px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    code, pre {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+    }
+
+    code {
+      background: #eef2f7;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--code);
+      color: #6ee7b7;
+      padding: 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef2f7;
+      font-weight: 700;
+    }
+
+    ul, ol {
+      padding-left: 24px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 980px;
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .metric {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      margin-top: 4px;
+      color: var(--accent);
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border: 1px solid #b7e3dc;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .warning {
+      background: var(--warn-soft);
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .success {
+      background: var(--good-soft);
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .danger {
+      background: var(--bad-soft);
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc a {
+      display: block;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .grid, .toc {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      header {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>WESAD ECG chest + Random Forest LOSO: report del lavoro svolto</h1>
+    <p class="subtitle">
+      Riassunto della pipeline ECG da petto: estrazione feature ECG, validazione
+      CSV, baseline Random Forest, normalizzazione rispetto alla baseline
+      personale e confronto dei risultati con Leave-One-Subject-Out.
+    </p>
+  </header>
+
+  <main>
+    <ul class="toc">
+      <li><a href="#sintesi">Sintesi</a></li>
+      <li><a href="#feature">Feature</a></li>
+      <li><a href="#metodo">Metodo</a></li>
+      <li><a href="#risultati">Risultati</a></li>
+      <li><a href="#fn">Falsi negativi</a></li>
+      <li><a href="#spiegazione">Spiegazione orale</a></li>
+    </ul>
+
+    <section id="sintesi">
+      <h2>Sintesi</h2>
+      <div class="success">
+        <p>
+          Il modello ECG chest e' migliorato molto con la normalizzazione rispetto
+          alla baseline personale. La baseline Random Forest precedente aveva
+          F1 stress pari a <strong>59.43%</strong>; la versione migliore arriva a
+          <strong>75.30%</strong>.
+        </p>
+      </div>
+
+      <div class="grid">
+        <div class="metric">
+          Modello migliore
+          <strong>RF + z-score</strong>
+          <span class="small">Random Forest con 12 feature baseline-normalized.</span>
+        </div>
+        <div class="metric">
+          Accuracy
+          <strong>86.44%</strong>
+          <span class="small">Su 1069 finestre ECG.</span>
+        </div>
+        <div class="metric">
+          F1 stress
+          <strong>75.30%</strong>
+          <span class="small">Miglioramento di +15.87 punti.</span>
+        </div>
+        <div class="metric">
+          Recall stress
+          <strong>68.85%</strong>
+          <span class="small">Restano 100 stress mancati.</span>
+        </div>
+      </div>
+
+      <table>
+        <tr>
+          <th>Elemento</th>
+          <th>Valore</th>
+        </tr>
+        <tr>
+          <td>Dataset</td>
+          <td><code>data_features/ecg_chest_features_all_60s.csv</code></td>
+        </tr>
+        <tr>
+          <td>Soggetti</td>
+          <td>15 soggetti: S2-S17, esclusi S1 e S12</td>
+        </tr>
+        <tr>
+          <td>Campioni</td>
+          <td>1069 finestre da 60 s, step 30 s</td>
+        </tr>
+        <tr>
+          <td>Distribuzione classi</td>
+          <td>748 non-stress, 321 stress</td>
+        </tr>
+        <tr>
+          <td>Validazione</td>
+          <td>Leave-One-Subject-Out</td>
+        </tr>
+        <tr>
+          <td>Soglia classificazione</td>
+          <td>0.5, default di <code>RandomForestClassifier</code></td>
+        </tr>
+        <tr>
+          <td>Pulizia/scarto finestre</td>
+          <td>Non applicata</td>
+        </tr>
+      </table>
+    </section>
+
+    <section id="feature">
+      <h2>Quante Feature Abbiamo</h2>
+      <div class="card">
+        <p>
+          Nel CSV ECG sono state estratte <strong>33 feature assolute</strong>.
+          Per la normalizzazione personale sono state selezionate
+          <strong>12 feature fisiologicamente interpretabili</strong>. Da queste
+          sono state generate <strong>24 feature candidate</strong>: 12 delta e
+          12 z-score.
+        </p>
+        <p>
+          Il modello migliore usa <strong>solo 12 feature</strong>:
+          le 12 feature <code>_baseline_zscore</code>. Questo e' un buon risultato,
+          perche' migliora le metriche senza rendere il modello troppo difficile
+          da spiegare.
+        </p>
+      </div>
+
+      <table>
+        <tr>
+          <th>Gruppo</th>
+          <th>Numero feature</th>
+          <th>Significato</th>
+        </tr>
+        <tr>
+          <td>Feature ECG assolute</td>
+          <td>33</td>
+          <td>Statistiche del segnale ECG, R-peak, RR interval, heart rate e HRV.</td>
+        </tr>
+        <tr>
+          <td>Feature selezionate per baseline</td>
+          <td>12</td>
+          <td>Feature ECG/HRV scelte perche' facili da motivare fisiologicamente.</td>
+        </tr>
+        <tr>
+          <td>Feature delta generate</td>
+          <td>12</td>
+          <td><code>valore finestra - media baseline soggetto</code>.</td>
+        </tr>
+        <tr>
+          <td>Feature z-score generate</td>
+          <td>12</td>
+          <td><code>(valore finestra - media baseline) / std baseline</code>.</td>
+        </tr>
+        <tr>
+          <td>Feature candidate totali nel set piu' grande</td>
+          <td>57</td>
+          <td>33 assolute + 12 delta + 12 z-score.</td>
+        </tr>
+        <tr>
+          <td>Feature usate dal modello migliore</td>
+          <td>12</td>
+          <td>Solo le z-score rispetto alla baseline personale.</td>
+        </tr>
+      </table>
+
+      <h3>Feature normalizzate rispetto alla baseline</h3>
+      <table>
+        <tr>
+          <th>Feature</th>
+          <th>Cosa misura</th>
+          <th>Perche' serve</th>
+        </tr>
+        <tr>
+          <td><code>ecg_hr_mean</code></td>
+          <td>Frequenza cardiaca media nella finestra.</td>
+          <td>Lo stress puo' aumentare la frequenza cardiaca rispetto al riposo personale.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_hr_std</code></td>
+          <td>Variazione della frequenza cardiaca.</td>
+          <td>Indica quanto il ritmo cardiaco e' stabile o instabile nella finestra.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_hr_range</code></td>
+          <td>Differenza tra HR massima e minima.</td>
+          <td>Cattura escursioni rapide della frequenza cardiaca.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_rr_mean</code></td>
+          <td>Intervallo medio tra due battiti consecutivi.</td>
+          <td>RR piu' basso corrisponde in genere a frequenza cardiaca piu' alta.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_rr_std</code></td>
+          <td>Variabilita' degli intervalli RR.</td>
+          <td>Misura una parte della variabilita' cardiaca.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_rmssd</code></td>
+          <td>Variazione battito-battito degli RR.</td>
+          <td>Feature HRV classica, legata alla regolazione parasimpatica.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_sdnn</code></td>
+          <td>Variabilita' globale degli intervalli RR.</td>
+          <td>Riassume la dispersione generale del ritmo cardiaco.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_pnn50</code></td>
+          <td>Quota di variazioni RR maggiori di 50 ms.</td>
+          <td>Misura quante variazioni battito-battito sono marcate.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_cvnn</code></td>
+          <td>Variabilita' RR normalizzata rispetto al RR medio.</td>
+          <td>Rende la variabilita' piu' confrontabile tra soggetti.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_r_peak_rate_per_min</code></td>
+          <td>Numero di R-peak al minuto.</td>
+          <td>E' una misura vicina alla frequenza cardiaca.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_energy</code></td>
+          <td>Energia del segnale ECG nella finestra.</td>
+          <td>Cattura intensita' complessiva del segnale filtrato.</td>
+        </tr>
+        <tr>
+          <td><code>ecg_kurtosis</code></td>
+          <td>Forma della distribuzione del segnale ECG.</td>
+          <td>Aiuta a descrivere quanto il segnale ha picchi concentrati o code marcate.</td>
+        </tr>
+      </table>
+    </section>
+
+    <section id="metodo">
+      <h2>Metodo</h2>
+      <div class="note">
+        <p>
+          L'idea e' semplice: ogni soggetto ha una fisiologia di partenza diversa.
+          Un valore assoluto di frequenza cardiaca o HRV puo' significare cose
+          diverse tra persone diverse. Per questo abbiamo creato feature relative
+          alla baseline personale.
+        </p>
+      </div>
+
+      <h3>Calcolo della baseline</h3>
+      <p>
+        Per ogni soggetto sono state usate solo le finestre con
+        <code>original_label=1</code>, cioe' baseline/riposo. Su queste finestre
+        si calcolano media e deviazione standard personali.
+      </p>
+
+      <pre>delta = valore_finestra - media_baseline_soggetto
+zscore = (valore_finestra - media_baseline_soggetto) / std_baseline_soggetto</pre>
+
+      <p>
+        Esempio: se un soggetto ha <code>ecg_hr_mean</code> baseline pari a 90 bpm
+        e in una finestra ha 120 bpm, il delta e' +30 bpm. Lo z-score dice quanto
+        questo scostamento e' grande rispetto alla variabilita' normale della sua
+        baseline.
+      </p>
+
+      <h3>Modello</h3>
+      <table>
+        <tr>
+          <th>Parametro</th>
+          <th>Valore</th>
+        </tr>
+        <tr>
+          <td>Algoritmo</td>
+          <td><code>RandomForestClassifier</code></td>
+        </tr>
+        <tr>
+          <td><code>n_estimators</code></td>
+          <td>300</td>
+        </tr>
+        <tr>
+          <td><code>max_depth</code></td>
+          <td><code>None</code></td>
+        </tr>
+        <tr>
+          <td><code>min_samples_leaf</code></td>
+          <td>2</td>
+        </tr>
+        <tr>
+          <td><code>class_weight</code></td>
+          <td><code>balanced</code></td>
+        </tr>
+        <tr>
+          <td><code>random_state</code></td>
+          <td>42</td>
+        </tr>
+        <tr>
+          <td>Soglia</td>
+          <td>0.5</td>
+        </tr>
+      </table>
+    </section>
+
+    <section id="risultati">
+      <h2>Risultati</h2>
+      <h3>Confronto feature set</h3>
+      <table>
+        <tr>
+          <th>Feature set</th>
+          <th>N. feature</th>
+          <th>Accuracy</th>
+          <th>Precision stress</th>
+          <th>Recall stress</th>
+          <th>F1 stress</th>
+          <th>TN</th>
+          <th>FP</th>
+          <th>FN</th>
+          <th>TP</th>
+        </tr>
+        <tr>
+          <td><code>baseline_zscore_12</code></td>
+          <td>12</td>
+          <td>86.44%</td>
+          <td>83.08%</td>
+          <td>68.85%</td>
+          <td><strong>75.30%</strong></td>
+          <td>703</td>
+          <td>45</td>
+          <td>100</td>
+          <td>221</td>
+        </tr>
+        <tr>
+          <td><code>baseline_delta_12</code></td>
+          <td>12</td>
+          <td>86.62%</td>
+          <td>85.60%</td>
+          <td>66.67%</td>
+          <td>74.96%</td>
+          <td>712</td>
+          <td>36</td>
+          <td>107</td>
+          <td>214</td>
+        </tr>
+        <tr>
+          <td><code>absolute_plus_delta_45</code></td>
+          <td>45</td>
+          <td>85.78%</td>
+          <td>87.22%</td>
+          <td>61.68%</td>
+          <td>72.26%</td>
+          <td>719</td>
+          <td>29</td>
+          <td>123</td>
+          <td>198</td>
+        </tr>
+        <tr>
+          <td><code>absolute_plus_delta_zscore_57</code></td>
+          <td>57</td>
+          <td>85.59%</td>
+          <td>88.13%</td>
+          <td>60.12%</td>
+          <td>71.48%</td>
+          <td>722</td>
+          <td>26</td>
+          <td>128</td>
+          <td>193</td>
+        </tr>
+        <tr>
+          <td><code>absolute_plus_zscore_45</code></td>
+          <td>45</td>
+          <td>83.35%</td>
+          <td>82.06%</td>
+          <td>57.01%</td>
+          <td>67.28%</td>
+          <td>708</td>
+          <td>40</td>
+          <td>138</td>
+          <td>183</td>
+        </tr>
+        <tr>
+          <td><code>absolute_33</code></td>
+          <td>33</td>
+          <td>74.84%</td>
+          <td>57.60%</td>
+          <td>61.37%</td>
+          <td>59.43%</td>
+          <td>603</td>
+          <td>145</td>
+          <td>124</td>
+          <td>197</td>
+        </tr>
+      </table>
+
+      <h3>Confusion matrix migliore</h3>
+      <pre>Righe = vere, colonne = predette, classi [0, 1]
+
+[[703  45]
+ [100 221]]</pre>
+
+      <p>
+        Interpretazione: il modello riconosce correttamente 221 finestre stress,
+        ma ne perde ancora 100. Riduce molto i falsi positivi rispetto alla
+        baseline assoluta: da 145 a 45.
+      </p>
+
+      <h3>Feature piu' importanti</h3>
+      <table>
+        <tr>
+          <th>Rank</th>
+          <th>Feature</th>
+          <th>Importanza media</th>
+          <th>Interpretazione</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><code>ecg_kurtosis_baseline_zscore</code></td>
+          <td>0.1811</td>
+          <td>Scostamento della forma del segnale ECG rispetto al riposo personale.</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code>ecg_energy_baseline_zscore</code></td>
+          <td>0.1705</td>
+          <td>Scostamento dell'energia del segnale rispetto alla baseline.</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><code>ecg_rmssd_baseline_zscore</code></td>
+          <td>0.1550</td>
+          <td>Scostamento della variabilita' battito-battito.</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><code>ecg_pnn50_baseline_zscore</code></td>
+          <td>0.0824</td>
+          <td>Scostamento della quota di variazioni RR maggiori di 50 ms.</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><code>ecg_rr_mean_baseline_zscore</code></td>
+          <td>0.0672</td>
+          <td>Scostamento dell'intervallo medio tra battiti.</td>
+        </tr>
+      </table>
+    </section>
+
+    <section id="fn">
+      <h2>Falsi Negativi</h2>
+      <div class="warning">
+        <p>
+          Il modello e' migliorato molto, ma restano <strong>100 falsi negativi</strong>.
+          Questi sono casi stress reali predetti come non-stress. Il recall stress
+          e' <strong>68.85%</strong>, quindi circa un terzo delle finestre stress
+          viene ancora mancato.
+        </p>
+      </div>
+
+      <table>
+        <tr>
+          <th>Modello</th>
+          <th>FN</th>
+          <th>TP</th>
+          <th>Recall stress</th>
+          <th>Commento</th>
+        </tr>
+        <tr>
+          <td>ECG assoluto 33 feature</td>
+          <td>124</td>
+          <td>197</td>
+          <td>61.37%</td>
+          <td>Riconosce entrambe le classi, ma generalizza male tra soggetti.</td>
+        </tr>
+        <tr>
+          <td>ECG baseline z-score 12 feature</td>
+          <td>100</td>
+          <td>221</td>
+          <td>68.85%</td>
+          <td>Migliora il recall e riduce molto i falsi positivi.</td>
+        </tr>
+      </table>
+
+      <p>
+        I soggetti piu' critici nella configurazione migliore sono S2, S7, S15,
+        S10 e S9. In questi casi il modello spesso e' prudente: predice pochi
+        stress, quindi mantiene precisione discreta su alcuni soggetti ma perde
+        parecchie finestre stress.
+      </p>
+
+      <table>
+        <tr>
+          <th>Soggetto</th>
+          <th>Accuracy</th>
+          <th>Precision</th>
+          <th>Recall</th>
+          <th>F1</th>
+          <th>FN</th>
+          <th>TP</th>
+        </tr>
+        <tr>
+          <td>S2</td>
+          <td>61.19%</td>
+          <td>29.41%</td>
+          <td>26.32%</td>
+          <td>27.78%</td>
+          <td>14</td>
+          <td>5</td>
+        </tr>
+        <tr>
+          <td>S7</td>
+          <td>77.46%</td>
+          <td>100.00%</td>
+          <td>23.81%</td>
+          <td>38.46%</td>
+          <td>16</td>
+          <td>5</td>
+        </tr>
+        <tr>
+          <td>S15</td>
+          <td>73.24%</td>
+          <td>66.67%</td>
+          <td>27.27%</td>
+          <td>38.71%</td>
+          <td>16</td>
+          <td>6</td>
+        </tr>
+        <tr>
+          <td>S10</td>
+          <td>74.67%</td>
+          <td>85.71%</td>
+          <td>25.00%</td>
+          <td>38.71%</td>
+          <td>18</td>
+          <td>6</td>
+        </tr>
+        <tr>
+          <td>S9</td>
+          <td>75.00%</td>
+          <td>66.67%</td>
+          <td>28.57%</td>
+          <td>40.00%</td>
+          <td>15</td>
+          <td>6</td>
+        </tr>
+      </table>
+
+      <div class="danger">
+        <p>
+          Nota metodologica: con il vincolo di soglia fissa 0.5 non abbiamo
+          ottimizzato la soglia per aumentare il recall. Quindi il numero di FN
+          resta una limitazione esplicita del modello attuale.
+        </p>
+      </div>
+    </section>
+
+    <section id="spiegazione">
+      <h2>Spiegazione Orale</h2>
+      <div class="card">
+        <p>
+          In questa fase siamo passati dal segnale ECG chest al modello Random
+          Forest. Prima abbiamo estratto 33 feature ECG da finestre da 60 secondi:
+          statistiche del segnale, R-peak, intervalli RR, frequenza cardiaca e
+          alcune feature HRV. La prima baseline, usando queste feature assolute,
+          arrivava a F1 stress 59.43%.
+        </p>
+        <p>
+          Il limite era la variabilita' tra soggetti: lo stesso valore di frequenza
+          cardiaca o HRV puo' essere normale per una persona e anomalo per un'altra.
+          Per questo abbiamo introdotto una normalizzazione rispetto alla baseline
+          personale, usando solo le finestre a riposo con <code>original_label=1</code>.
+        </p>
+        <p>
+          La versione migliore usa 12 feature z-score rispetto alla baseline. In
+          pratica ogni feature dice quanto la finestra corrente si discosta dal
+          riposo personale del soggetto. Questo rende il modello piu' spiegabile
+          e migliora molto le metriche: F1 stress passa da 59.43% a 75.30% e
+          accuracy da 74.84% a 86.44%.
+        </p>
+        <p>
+          Il limite rimasto sono i falsi negativi: il modello perde ancora 100
+          finestre stress. Quindi il modello e' molto migliorato, ma il recall
+          stress non e' ancora perfetto. Questo va dichiarato chiaramente: la
+          normalizzazione personale migliora la generalizzazione, ma non elimina
+          completamente il problema degli stress mancati.
+        </p>
+      </div>
+
+      <h3>File prodotti</h3>
+      <ul>
+        <li><code>src/extract_ecg_chest_features_all.py</code></li>
+        <li><code>src/validate_ecg_chest_csv.py</code></li>
+        <li><code>src/train_ecg_chest_rf_loso.py</code></li>
+        <li><code>src/train_ecg_chest_rf_baseline_norm.py</code></li>
+        <li><code>data_features/ecg_chest_features_all_60s.csv</code></li>
+        <li><code>results/ecg_chest_rf_baseline_norm_results.csv</code></li>
+        <li><code>results/ecg_chest_rf_baseline_norm_best_per_subject.csv</code></li>
+        <li><code>results/ecg_chest_rf_baseline_norm_best_feature_importance.csv</code></li>
+        <li><code>results/ecg_chest_rf_baseline_norm_summary.txt</code></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
