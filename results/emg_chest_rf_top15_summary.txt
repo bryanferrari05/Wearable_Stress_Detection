@@ -1,0 +1,71 @@
+# EMG chest + Random Forest top15 LOSO summary
+
+Dataset usato: data_features\emg_chest_features_all_60s.csv
+Feature usate (15): emg_relative_power_60_120, emg_median, emg_skew, emg_relative_power_20_60, emg_hjorth_complexity, emg_slope_sign_change_count, emg_relative_power_120_250, emg_slope_sign_change_rate, emg_zero_crossing_rate, emg_zero_crossing_count, emg_bandpower_20_60, emg_median_frequency, emg_mean_frequency, emg_hjorth_mobility, emg_bandpower_120_250
+Feature escluse per evitare leakage: subject, start_sec, end_sec, window_sec, step_sec, original_label, label, label_purity
+Modello usato: RandomForestClassifier
+n_estimators = 300
+max_depth = None
+min_samples_leaf = 2
+class_weight = balanced
+random_state = 42
+Metodo di validazione: Leave-One-Subject-Out
+Soglia di classificazione: 0.5, default Random Forest.
+Scaling: non usato, perche' Random Forest non richiede StandardScaler.
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.6984 (69.84%)
+Precision media sui fold: 0.5938 (59.38%)
+Recall media sui fold: 0.5100 (51.00%)
+F1 media sui fold: 0.4780 (47.80%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.6978 (69.78%)
+Precision aggregata globale: 0.4970 (49.70%)
+Recall aggregata globale: 0.5109 (51.09%)
+F1 aggregata globale: 0.5038 (50.38%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[582 166]
+ [157 164]]
+TN=582, FP=166, FN=157, TP=164
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.79      0.78      0.78       748
+           1       0.50      0.51      0.50       321
+
+    accuracy                           0.70      1069
+   macro avg       0.64      0.64      0.64      1069
+weighted avg       0.70      0.70      0.70      1069
+
+
+## Top feature Random Forest
+                    feature  mean_importance  std_importance
+      emg_bandpower_120_250         0.102560        0.008194
+                 emg_median         0.095728        0.005774
+        emg_bandpower_20_60         0.094852        0.007321
+  emg_relative_power_60_120         0.091030        0.005838
+                   emg_skew         0.080596        0.004380
+ emg_relative_power_120_250         0.059801        0.006221
+   emg_relative_power_20_60         0.057106        0.002265
+      emg_hjorth_complexity         0.055937        0.003211
+emg_slope_sign_change_count         0.054994        0.003752
+     emg_zero_crossing_rate         0.053913        0.003724
+ emg_slope_sign_change_rate         0.053651        0.003700
+    emg_zero_crossing_count         0.053346        0.003368
+       emg_median_frequency         0.050110        0.003108
+        emg_hjorth_mobility         0.049337        0.004230
+         emg_mean_frequency         0.047038        0.003627
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.3280).
+- S10: accuracy=0.6667, precision=0.3333, recall=0.0417, f1=0.0741, TN=49, FP=2, FN=23, TP=1
+- S2: accuracy=0.7313, precision=0.6667, recall=0.1053, f1=0.1818, TN=47, FP=1, FN=17, TP=2
+- S5: accuracy=0.6389, precision=0.0000, recall=0.0000, f1=0.0000, TN=46, FP=5, FN=21, TP=0
+- S7: accuracy=0.2676, precision=0.1837, recall=0.4286, f1=0.2571, TN=10, FP=40, FN=12, TP=9

@@ -213,3 +213,71 @@
 
 - File creato: `results/report_ecg_chest_rf_baseline_norm.html`
 - Contenuto: pipeline ECG chest completa, conteggio feature, normalizzazione baseline personale, confronto Random Forest assoluta vs baseline-normalized, confusion matrix, falsi negativi, feature importance e spiegazione pronta per l'orale.
+
+## Passo 13 - Estrazione feature EMG chest
+
+- Script creati:
+  - `src/extract_emg_chest_features_all.py`
+  - `src/validate_emg_chest_csv.py`
+- Segnale usato: `signal["chest"]["EMG"]`, campionato a `700 Hz`.
+- Cartella dati usata: `C:\Users\aranh\Downloads\WESAD\WESAD`.
+- Segmentazione coerente con BVP/EDA/ECG: finestre di `60 s`, passo di `30 s`, purezza label minima `0.70`.
+- Feature estratte: statistiche sul segnale EMG filtrato bandpass `20-250 Hz`, ampiezza rettificata, IEMG/MAV, waveform length, zero crossing, slope sign changes, Willison amplitude, Hjorth e feature spettrali Welch.
+- File generati:
+  - `data_features/emg_chest_features_all_60s.csv`
+- Risultato estrazione:
+  - Shape completa: `(1069, 50)`
+  - Soggetti: `15`
+  - Distribuzione label: `0=748`, `1=321`
+  - NaN totali: `0`
+- Validazione: `src/validate_emg_chest_csv.py` passata, con finestre e label allineate al CSV BVP di riferimento.
+
+
+## Passo 14 - EMG chest + Random Forest LOSO
+
+- Script creato: `src/train_emg_chest_rf_loso.py`
+- Dataset usato: `data_features/emg_chest_features_all_60s.csv`
+- Feature usate: `emg_mean, emg_std, emg_min, emg_max, emg_range, emg_median, emg_iqr, emg_rms, emg_energy, emg_skew, emg_kurtosis, emg_abs_mean, emg_abs_std, emg_abs_median, emg_abs_max, emg_iemg, emg_mav, emg_log_detector, emg_variance, emg_waveform_length, emg_average_amplitude_change, emg_derivative_mean, emg_derivative_std, emg_derivative_max_abs, emg_zero_crossing_count, emg_zero_crossing_rate, emg_slope_sign_change_count, emg_slope_sign_change_rate, emg_willison_amplitude_count, emg_willison_amplitude_rate, emg_hjorth_activity, emg_hjorth_mobility, emg_hjorth_complexity, emg_total_power, emg_mean_frequency, emg_median_frequency, emg_bandpower_20_60, emg_bandpower_60_120, emg_bandpower_120_250, emg_relative_power_20_60, emg_relative_power_60_120, emg_relative_power_120_250`
+- Validazione: Leave-One-Subject-Out per soggetto.
+- Modello baseline: `RandomForestClassifier(n_estimators=300, min_samples_leaf=2, class_weight="balanced", random_state=42)`
+- Scaling: non usato, perche' Random Forest non richiede `StandardScaler`.
+- Risultati principali:
+  - Accuracy media fold: 0.6741 (67.41%)
+  - F1 media fold: 0.3935 (39.35%)
+  - Accuracy aggregata globale: 0.6735 (67.35%)
+  - F1 aggregata globale: 0.4504 (45.04%)
+  - Confusion matrix aggregata: TN=577, FP=171, FN=178, TP=143
+- File generati:
+  - `results/emg_chest_rf_loso_per_subject.csv`
+  - `results/emg_chest_rf_feature_importance.csv`
+  - `results/emg_chest_rf_summary.txt`
+- Osservazioni:
+  - Il modello predice entrambe le classi.
+  - Soggetti problematici secondo soglia F1: S10, S2, S5, S6
+  - Questa esecuzione e' la baseline Random Forest EMG chest; non include ancora tuning degli iperparametri.
+
+## Passo 15 - EMG chest + Random Forest top15 LOSO
+
+- Script finale: `src/train_emg_chest_rf_top15_loso.py`
+- Dataset usato: `data_features/emg_chest_features_all_60s.csv`
+- Feature usate: `emg_relative_power_60_120, emg_median, emg_skew, emg_relative_power_20_60, emg_hjorth_complexity, emg_slope_sign_change_count, emg_relative_power_120_250, emg_slope_sign_change_rate, emg_zero_crossing_rate, emg_zero_crossing_count, emg_bandpower_20_60, emg_median_frequency, emg_mean_frequency, emg_hjorth_mobility, emg_bandpower_120_250`
+- Validazione: Leave-One-Subject-Out per soggetto.
+- Modello: `RandomForestClassifier(n_estimators=300, min_samples_leaf=2, class_weight="balanced", random_state=42)`
+- Soglia classificazione: default `0.5`; nessun tuning soglia.
+- Iperparametri Random Forest: nessun tuning.
+- Risultati:
+  - Accuracy aggregata: 0.6978 (69.78%)
+  - Precision aggregata: 0.4970 (49.70%)
+  - Recall aggregata: 0.5109 (51.09%)
+  - F1 aggregato: 0.5038 (50.38%)
+  - Confusion matrix: TN=582, FP=166, FN=157, TP=164
+- Soggetti problematici secondo soglia F1: S10, S2, S5, S7
+- File generati:
+  - `results/emg_chest_rf_top15_loso_per_subject.csv`
+  - `results/emg_chest_rf_top15_feature_importance.csv`
+  - `results/emg_chest_rf_top15_summary.txt`
+
+## Report HTML EMG chest
+
+- File creato: `results/report_emg_chest_rf_top15_loso.html`
+- Contenuto: pipeline EMG chest completa, feature estratte, scelta top15, confronto con baseline all-feature, confusion matrix, performance per soggetto, feature importance e conclusione sul ruolo di EMG nel progetto.

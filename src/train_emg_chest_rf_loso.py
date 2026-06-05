@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -11,46 +12,16 @@ from sklearn.metrics import (
     recall_score,
 )
 from sklearn.model_selection import LeaveOneGroupOut
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import StandardScaler
+
+from validate_emg_chest_csv import FEATURE_COLUMNS as FEATURE_COLS
 
 
-DATASET_FILE = Path("data_features") / "eda_features_all_60s.csv"
+DATASET_FILE = Path("data_features") / "emg_chest_features_all_60s.csv"
 RESULTS_DIR = Path("results")
-PER_SUBJECT_FILE = RESULTS_DIR / "eda_knn_loso_per_subject.csv"
-SUMMARY_FILE = RESULTS_DIR / "eda_knn_summary.txt"
+PER_SUBJECT_FILE = RESULTS_DIR / "emg_chest_rf_loso_per_subject.csv"
+FEATURE_IMPORTANCE_FILE = RESULTS_DIR / "emg_chest_rf_feature_importance.csv"
+SUMMARY_FILE = RESULTS_DIR / "emg_chest_rf_summary.txt"
 PROGRESS_FILE = Path("PROGRESS.md")
-
-FEATURE_COLS = [
-    "eda_mean",
-    "eda_std",
-    "eda_min",
-    "eda_max",
-    "eda_range",
-    "eda_median",
-    "eda_iqr",
-    "eda_rms",
-    "eda_energy",
-    "eda_skew",
-    "eda_kurtosis",
-    "eda_slope",
-    "eda_derivative_mean",
-    "eda_derivative_std",
-    "eda_derivative_max",
-    "eda_tonic_mean",
-    "eda_tonic_std",
-    "eda_tonic_slope",
-    "eda_phasic_mean",
-    "eda_phasic_std",
-    "eda_phasic_max",
-    "eda_phasic_auc",
-    "eda_scr_count",
-    "eda_scr_rate_per_min",
-    "eda_scr_amplitude_mean",
-    "eda_scr_amplitude_std",
-    "eda_scr_amplitude_max",
-    "eda_scr_prominence_mean",
-]
 
 EXCLUDED_FEATURE_COLS = [
     "subject",
@@ -65,8 +36,11 @@ EXCLUDED_FEATURE_COLS = [
 
 TARGET_COL = "label"
 GROUP_COL = "subject"
-K_NEIGHBORS = 9
-KNN_WEIGHTS = "distance"
+N_ESTIMATORS = 300
+MAX_DEPTH = None
+MIN_SAMPLES_LEAF = 2
+CLASS_WEIGHT = "balanced"
+RANDOM_STATE = 42
 LOW_PERFORMANCE_MARGIN = 0.15
 
 
@@ -81,7 +55,10 @@ def format_counts(series):
 
 def load_dataset():
     if not DATASET_FILE.exists():
-        raise FileNotFoundError(f"Dataset non trovato: {DATASET_FILE}")
+        raise FileNotFoundError(
+            f"Dataset non trovato: {DATASET_FILE}. "
+            "Prima esegui src/extract_emg_chest_features_all.py."
+        )
 
     return pd.read_csv(DATASET_FILE)
 
@@ -95,13 +72,24 @@ def validate_dataset(df):
     if df.empty:
         raise ValueError("Dataset vuoto.")
     if df[TARGET_COL].nunique() < 2:
-        raise ValueError("Servono almeno 2 classi in y per addestrare kNN.")
+        raise ValueError("Servono almeno 2 classi in y per addestrare Random Forest.")
     if df[GROUP_COL].nunique() < 2:
         raise ValueError("Servono almeno 2 soggetti per Leave-One-Subject-Out.")
 
     finite_features = np.isfinite(df[FEATURE_COLS].to_numpy(dtype=float))
     if not finite_features.all():
-        raise ValueError("Sono presenti NaN o valori infiniti nelle feature EDA.")
+        raise ValueError("Sono presenti NaN o valori infiniti nelle feature EMG chest.")
+
+
+def build_model():
+    return RandomForestClassifier(
+        n_estimators=N_ESTIMATORS,
+        max_depth=MAX_DEPTH,
+        min_samples_leaf=MIN_SAMPLES_LEAF,
+        class_weight=CLASS_WEIGHT,
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    )
 
 
 def get_binary_confusion_values(y_true, y_pred):
@@ -109,7 +97,7 @@ def get_binary_confusion_values(y_true, y_pred):
     return int(tn), int(fp), int(fn), int(tp)
 
 
-def run_loso_knn(df):
+def run_loso_random_forest(df):
     X = df[FEATURE_COLS]
     y = df[TARGET_COL]
     groups = df[GROUP_COL]
@@ -118,6 +106,7 @@ def run_loso_knn(df):
     fold_rows = []
     all_true = []
     all_pred = []
+    feature_importance_rows = []
 
     for train_idx, test_idx in logo.split(X, y, groups):
         X_train = X.iloc[train_idx]
@@ -128,13 +117,9 @@ def run_loso_knn(df):
 
         print(f"LOSO fold - soggetto lasciato fuori: {left_out_subject}")
 
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-
-        model = KNeighborsClassifier(n_neighbors=K_NEIGHBORS, weights=KNN_WEIGHTS)
-        model.fit(X_train_scaled, y_train)
-        y_pred = model.predict(X_test_scaled)
+        model = build_model()
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
 
         tn, fp, fn, tp = get_binary_confusion_values(y_test, y_pred)
         fold_rows.append(
@@ -156,10 +141,35 @@ def run_loso_knn(df):
                 "tp": tp,
             }
         )
+
+        for feature_name, importance in zip(FEATURE_COLS, model.feature_importances_):
+            feature_importance_rows.append(
+                {
+                    "left_out_subject": left_out_subject,
+                    "feature": feature_name,
+                    "importance": importance,
+                }
+            )
+
         all_true.extend(y_test.tolist())
         all_pred.extend(y_pred.tolist())
 
-    return pd.DataFrame(fold_rows), pd.Series(all_true), pd.Series(all_pred)
+    return (
+        pd.DataFrame(fold_rows),
+        pd.Series(all_true),
+        pd.Series(all_pred),
+        pd.DataFrame(feature_importance_rows),
+    )
+
+
+def aggregate_feature_importances(feature_importance_df):
+    return (
+        feature_importance_df.groupby("feature")["importance"]
+        .agg(["mean", "std"])
+        .reset_index()
+        .rename(columns={"mean": "mean_importance", "std": "std_importance"})
+        .sort_values("mean_importance", ascending=False)
+    )
 
 
 def calculate_summary_values(df, per_subject_df, y_true, y_pred):
@@ -197,7 +207,14 @@ def calculate_summary_values(df, per_subject_df, y_true, y_pred):
     }
 
 
-def build_summary(df, per_subject_df, y_true, y_pred, summary_values):
+def build_summary(
+    df,
+    per_subject_df,
+    feature_importance_summary_df,
+    y_true,
+    y_pred,
+    summary_values,
+):
     aggregate_cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
     report = classification_report(y_true, y_pred, labels=[0, 1], zero_division=0)
     low_rows = per_subject_df[
@@ -207,16 +224,20 @@ def build_summary(df, per_subject_df, y_true, y_pred, summary_values):
     ]
 
     lines = [
-        "# EDA wrist + kNN LOSO summary",
+        "# EMG chest + Random Forest LOSO summary",
         "",
         f"Dataset usato: {DATASET_FILE}",
         f"Feature usate ({len(FEATURE_COLS)}): {', '.join(FEATURE_COLS)}",
         f"Feature escluse per evitare leakage: {', '.join(EXCLUDED_FEATURE_COLS)}",
-        "Modello usato: KNeighborsClassifier",
-        f"n_neighbors = {K_NEIGHBORS}",
-        f"weights = {KNN_WEIGHTS}",
+        "Modello usato: RandomForestClassifier",
+        f"n_estimators = {N_ESTIMATORS}",
+        f"max_depth = {MAX_DEPTH}",
+        f"min_samples_leaf = {MIN_SAMPLES_LEAF}",
+        f"class_weight = {CLASS_WEIGHT}",
+        f"random_state = {RANDOM_STATE}",
         "Metodo di validazione: Leave-One-Subject-Out",
-        "Scaling: StandardScaler fittato solo sul training fold.",
+        "Nota LOSO: ogni fold allena su tutti i soggetti tranne quello testato.",
+        "Scaling: non usato, perche' Random Forest non richiede StandardScaler.",
         f"Numero totale di soggetti: {summary_values['n_subjects']}",
         f"Numero totale di finestre/campioni: {summary_values['n_samples']}",
         f"Distribuzione globale delle classi: {format_counts(df[TARGET_COL])}",
@@ -258,6 +279,9 @@ def build_summary(df, per_subject_df, y_true, y_pred, summary_values):
             else "Il modello predice entrambe le classi."
         ),
         "",
+        "## Top feature Random Forest",
+        feature_importance_summary_df.head(15).to_string(index=False),
+        "",
         "## Soggetti con performance molto piu' bassa",
         f"Criterio: F1 < media fold F1 - {LOW_PERFORMANCE_MARGIN:.2f} "
         f"({summary_values['low_f1_threshold']:.4f}).",
@@ -278,9 +302,9 @@ def build_summary(df, per_subject_df, y_true, y_pred, summary_values):
         [
             "",
             "## Nota",
-            "Questa e' la baseline kNN EDA con feature statistiche, toniche, "
-            "fasiche e SCR estratte nel CSV; il tuning degli iperparametri non "
-            "e' incluso in questa esecuzione.",
+            "Questa e' la baseline EMG chest con Random Forest. Il modello usa "
+            "solo feature estratte dal segnale EMG chest e non include ancora "
+            "tuning degli iperparametri.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -303,6 +327,7 @@ def replace_or_append_progress_section(section_title, section):
         updated_content = f"{content[:start]}{section}"
     else:
         updated_content = f"{content[:start]}{section}\n{content[next_section + 1:]}"
+
     PROGRESS_FILE.write_text(updated_content, encoding="utf-8")
 
 
@@ -316,14 +341,15 @@ def update_progress(summary_values):
         if summary_values["predicts_single_class"]
         else "Il modello predice entrambe le classi."
     )
-    section_title = "## Passo 9 - EDA wrist + kNN LOSO"
+    section_title = "## Passo 14 - EMG chest + Random Forest LOSO"
     section = f"""{section_title}
 
-- Script creato: `src/train_eda_knn_loso.py`
-- Dataset usato: `data_features/eda_features_all_60s.csv`
+- Script creato: `src/train_emg_chest_rf_loso.py`
+- Dataset usato: `data_features/emg_chest_features_all_60s.csv`
 - Feature usate: `{", ".join(FEATURE_COLS)}`
-- Validazione: Leave-One-Subject-Out per soggetto, con `StandardScaler` fittato solo sul training fold.
-- Modello baseline: `KNeighborsClassifier(n_neighbors={K_NEIGHBORS}, weights="{KNN_WEIGHTS}")`
+- Validazione: Leave-One-Subject-Out per soggetto.
+- Modello baseline: `RandomForestClassifier(n_estimators={N_ESTIMATORS}, min_samples_leaf={MIN_SAMPLES_LEAF}, class_weight="{CLASS_WEIGHT}", random_state={RANDOM_STATE})`
+- Scaling: non usato, perche' Random Forest non richiede `StandardScaler`.
 - Risultati principali:
   - Accuracy media fold: {summary_values["mean_accuracy"]:.4f} ({format_percent(summary_values["mean_accuracy"])})
   - F1 media fold: {summary_values["mean_f1"]:.4f} ({format_percent(summary_values["mean_f1"])})
@@ -331,22 +357,33 @@ def update_progress(summary_values):
   - F1 aggregata globale: {summary_values["aggregate_f1"]:.4f} ({format_percent(summary_values["aggregate_f1"])})
   - Confusion matrix aggregata: TN={summary_values["tn"]}, FP={summary_values["fp"]}, FN={summary_values["fn"]}, TP={summary_values["tp"]}
 - File generati:
-  - `results/eda_knn_loso_per_subject.csv`
-  - `results/eda_knn_summary.txt`
+  - `results/emg_chest_rf_loso_per_subject.csv`
+  - `results/emg_chest_rf_feature_importance.csv`
+  - `results/emg_chest_rf_summary.txt`
 - Osservazioni:
   - {status}
   - Soggetti problematici secondo soglia F1: {low_subjects_text}
-  - Questa esecuzione e' la baseline EDA; non include ancora tuning degli iperparametri.
+  - Questa esecuzione e' la baseline Random Forest EMG chest; non include ancora tuning degli iperparametri.
 """
     replace_or_append_progress_section(section_title, section)
 
 
-def save_results(df, per_subject_df, y_true, y_pred):
+def save_results(df, per_subject_df, feature_importance_df, y_true, y_pred):
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     per_subject_df.to_csv(PER_SUBJECT_FILE, index=False)
 
+    feature_importance_summary_df = aggregate_feature_importances(feature_importance_df)
+    feature_importance_summary_df.to_csv(FEATURE_IMPORTANCE_FILE, index=False)
+
     summary_values = calculate_summary_values(df, per_subject_df, y_true, y_pred)
-    summary_text = build_summary(df, per_subject_df, y_true, y_pred, summary_values)
+    summary_text = build_summary(
+        df,
+        per_subject_df,
+        feature_importance_summary_df,
+        y_true,
+        y_pred,
+        summary_values,
+    )
     SUMMARY_FILE.write_text(summary_text, encoding="utf-8")
     update_progress(summary_values)
     return summary_values
@@ -355,11 +392,14 @@ def save_results(df, per_subject_df, y_true, y_pred):
 def main():
     df = load_dataset()
     validate_dataset(df)
-    per_subject_df, y_true, y_pred = run_loso_knn(df)
-    summary_values = save_results(df, per_subject_df, y_true, y_pred)
+    per_subject_df, y_true, y_pred, feature_importance_df = run_loso_random_forest(df)
+    summary_values = save_results(
+        df, per_subject_df, feature_importance_df, y_true, y_pred
+    )
 
     print("\nRisultati salvati:")
     print(f"- {PER_SUBJECT_FILE}")
+    print(f"- {FEATURE_IMPORTANCE_FILE}")
     print(f"- {SUMMARY_FILE}")
     print(f"- {PROGRESS_FILE}")
     print("\nMetriche aggregate:")

@@ -14,47 +14,29 @@ from sklearn.metrics import (
 from sklearn.model_selection import LeaveOneGroupOut
 
 
-DATASET_FILE = Path("data_features") / "ecg_chest_features_all_60s.csv"
+DATASET_FILE = Path("data_features") / "emg_chest_features_all_60s.csv"
 RESULTS_DIR = Path("results")
-PER_SUBJECT_FILE = RESULTS_DIR / "ecg_chest_rf_loso_per_subject.csv"
-FEATURE_IMPORTANCE_FILE = RESULTS_DIR / "ecg_chest_rf_feature_importance.csv"
-SUMMARY_FILE = RESULTS_DIR / "ecg_chest_rf_summary.txt"
+PER_SUBJECT_FILE = RESULTS_DIR / "emg_chest_rf_top15_loso_per_subject.csv"
+FEATURE_IMPORTANCE_FILE = RESULTS_DIR / "emg_chest_rf_top15_feature_importance.csv"
+SUMMARY_FILE = RESULTS_DIR / "emg_chest_rf_top15_summary.txt"
 PROGRESS_FILE = Path("PROGRESS.md")
 
 FEATURE_COLS = [
-    "ecg_mean",
-    "ecg_std",
-    "ecg_min",
-    "ecg_max",
-    "ecg_range",
-    "ecg_median",
-    "ecg_iqr",
-    "ecg_rms",
-    "ecg_energy",
-    "ecg_skew",
-    "ecg_kurtosis",
-    "ecg_derivative_mean",
-    "ecg_derivative_std",
-    "ecg_derivative_max_abs",
-    "ecg_r_peak_count",
-    "ecg_valid_rr_count",
-    "ecg_r_peak_rate_per_min",
-    "ecg_r_peak_prominence_mean",
-    "ecg_r_peak_prominence_std",
-    "ecg_rr_mean",
-    "ecg_rr_std",
-    "ecg_rr_min",
-    "ecg_rr_max",
-    "ecg_hr_mean",
-    "ecg_hr_std",
-    "ecg_hr_min",
-    "ecg_hr_max",
-    "ecg_hr_range",
-    "ecg_rmssd",
-    "ecg_sdnn",
-    "ecg_nn50_count",
-    "ecg_pnn50",
-    "ecg_cvnn",
+    "emg_relative_power_60_120",
+    "emg_median",
+    "emg_skew",
+    "emg_relative_power_20_60",
+    "emg_hjorth_complexity",
+    "emg_slope_sign_change_count",
+    "emg_relative_power_120_250",
+    "emg_slope_sign_change_rate",
+    "emg_zero_crossing_rate",
+    "emg_zero_crossing_count",
+    "emg_bandpower_20_60",
+    "emg_median_frequency",
+    "emg_mean_frequency",
+    "emg_hjorth_mobility",
+    "emg_bandpower_120_250",
 ]
 
 EXCLUDED_FEATURE_COLS = [
@@ -91,9 +73,8 @@ def load_dataset():
     if not DATASET_FILE.exists():
         raise FileNotFoundError(
             f"Dataset non trovato: {DATASET_FILE}. "
-            "Prima esegui src/extract_ecg_chest_features_all.py."
+            "Prima esegui src/extract_emg_chest_features_all.py."
         )
-
     return pd.read_csv(DATASET_FILE)
 
 
@@ -112,7 +93,7 @@ def validate_dataset(df):
 
     finite_features = np.isfinite(df[FEATURE_COLS].to_numpy(dtype=float))
     if not finite_features.all():
-        raise ValueError("Sono presenti NaN o valori infiniti nelle feature ECG chest.")
+        raise ValueError("Sono presenti NaN o valori infiniti nelle feature EMG chest.")
 
 
 def build_model():
@@ -235,7 +216,6 @@ def calculate_summary_values(df, per_subject_df, y_true, y_pred):
         "fn": fn,
         "tp": tp,
         "predicted_classes": predicted_classes,
-        "predicts_single_class": len(predicted_classes) == 1,
         "low_f1_threshold": low_f1_threshold,
         "low_performance_subjects": low_performance_subjects,
     }
@@ -258,7 +238,7 @@ def build_summary(
     ]
 
     lines = [
-        "# ECG chest + Random Forest LOSO summary",
+        "# EMG chest + Random Forest top15 LOSO summary",
         "",
         f"Dataset usato: {DATASET_FILE}",
         f"Feature usate ({len(FEATURE_COLS)}): {', '.join(FEATURE_COLS)}",
@@ -270,6 +250,7 @@ def build_summary(
         f"class_weight = {CLASS_WEIGHT}",
         f"random_state = {RANDOM_STATE}",
         "Metodo di validazione: Leave-One-Subject-Out",
+        "Soglia di classificazione: 0.5, default Random Forest.",
         "Scaling: non usato, perche' Random Forest non richiede StandardScaler.",
         f"Numero totale di soggetti: {summary_values['n_subjects']}",
         f"Numero totale di finestre/campioni: {summary_values['n_samples']}",
@@ -304,16 +285,8 @@ def build_summary(
         "## Classification report aggregato",
         report,
         "",
-        "## Controlli predizioni",
-        f"Classi predette globalmente: {summary_values['predicted_classes']}",
-        (
-            "ATTENZIONE: il modello predice una sola classe."
-            if summary_values["predicts_single_class"]
-            else "Il modello predice entrambe le classi."
-        ),
-        "",
         "## Top feature Random Forest",
-        feature_importance_summary_df.head(15).to_string(index=False),
+        feature_importance_summary_df.to_string(index=False),
         "",
         "## Soggetti con performance molto piu' bassa",
         f"Criterio: F1 < media fold F1 - {LOW_PERFORMANCE_MARGIN:.2f} "
@@ -331,15 +304,6 @@ def build_summary(
                 f"FN={row['fn']}, TP={row['tp']}"
             )
 
-    lines.extend(
-        [
-            "",
-            "## Nota",
-            "Questa e' la baseline ECG chest con Random Forest. Il modello usa "
-            "solo feature estratte dal segnale ECG chest e non include ancora "
-            "tuning degli iperparametri.",
-        ]
-    )
     return "\n".join(lines) + "\n"
 
 
@@ -369,34 +333,27 @@ def update_progress(summary_values):
     low_subjects_text = (
         ", ".join(low_subjects) if low_subjects else "nessun soggetto sotto soglia"
     )
-    status = (
-        "Il modello predice una sola classe."
-        if summary_values["predicts_single_class"]
-        else "Il modello predice entrambe le classi."
-    )
-    section_title = "## Passo 11 - ECG chest + Random Forest LOSO"
+    section_title = "## Passo 15 - EMG chest + Random Forest top15 LOSO"
     section = f"""{section_title}
 
-- Script creato: `src/train_ecg_chest_rf_loso.py`
-- Dataset usato: `data_features/ecg_chest_features_all_60s.csv`
+- Script finale: `src/train_emg_chest_rf_top15_loso.py`
+- Dataset usato: `data_features/emg_chest_features_all_60s.csv`
 - Feature usate: `{", ".join(FEATURE_COLS)}`
 - Validazione: Leave-One-Subject-Out per soggetto.
-- Modello baseline: `RandomForestClassifier(n_estimators={N_ESTIMATORS}, min_samples_leaf={MIN_SAMPLES_LEAF}, class_weight="{CLASS_WEIGHT}", random_state={RANDOM_STATE})`
-- Scaling: non usato, perche' Random Forest non richiede `StandardScaler`.
-- Risultati principali:
-  - Accuracy media fold: {summary_values["mean_accuracy"]:.4f} ({format_percent(summary_values["mean_accuracy"])})
-  - F1 media fold: {summary_values["mean_f1"]:.4f} ({format_percent(summary_values["mean_f1"])})
-  - Accuracy aggregata globale: {summary_values["aggregate_accuracy"]:.4f} ({format_percent(summary_values["aggregate_accuracy"])})
-  - F1 aggregata globale: {summary_values["aggregate_f1"]:.4f} ({format_percent(summary_values["aggregate_f1"])})
-  - Confusion matrix aggregata: TN={summary_values["tn"]}, FP={summary_values["fp"]}, FN={summary_values["fn"]}, TP={summary_values["tp"]}
+- Modello: `RandomForestClassifier(n_estimators={N_ESTIMATORS}, min_samples_leaf={MIN_SAMPLES_LEAF}, class_weight="{CLASS_WEIGHT}", random_state={RANDOM_STATE})`
+- Soglia classificazione: default `0.5`; nessun tuning soglia.
+- Iperparametri Random Forest: nessun tuning.
+- Risultati:
+  - Accuracy aggregata: {summary_values["aggregate_accuracy"]:.4f} ({format_percent(summary_values["aggregate_accuracy"])})
+  - Precision aggregata: {summary_values["aggregate_precision"]:.4f} ({format_percent(summary_values["aggregate_precision"])})
+  - Recall aggregata: {summary_values["aggregate_recall"]:.4f} ({format_percent(summary_values["aggregate_recall"])})
+  - F1 aggregato: {summary_values["aggregate_f1"]:.4f} ({format_percent(summary_values["aggregate_f1"])})
+  - Confusion matrix: TN={summary_values["tn"]}, FP={summary_values["fp"]}, FN={summary_values["fn"]}, TP={summary_values["tp"]}
+- Soggetti problematici secondo soglia F1: {low_subjects_text}
 - File generati:
-  - `results/ecg_chest_rf_loso_per_subject.csv`
-  - `results/ecg_chest_rf_feature_importance.csv`
-  - `results/ecg_chest_rf_summary.txt`
-- Osservazioni:
-  - {status}
-  - Soggetti problematici secondo soglia F1: {low_subjects_text}
-  - Questa esecuzione e' la baseline Random Forest ECG chest; non include ancora tuning degli iperparametri.
+  - `results/emg_chest_rf_top15_loso_per_subject.csv`
+  - `results/emg_chest_rf_top15_feature_importance.csv`
+  - `results/emg_chest_rf_top15_summary.txt`
 """
     replace_or_append_progress_section(section_title, section)
 
@@ -409,15 +366,17 @@ def save_results(df, per_subject_df, feature_importance_df, y_true, y_pred):
     feature_importance_summary_df.to_csv(FEATURE_IMPORTANCE_FILE, index=False)
 
     summary_values = calculate_summary_values(df, per_subject_df, y_true, y_pred)
-    summary_text = build_summary(
-        df,
-        per_subject_df,
-        feature_importance_summary_df,
-        y_true,
-        y_pred,
-        summary_values,
+    SUMMARY_FILE.write_text(
+        build_summary(
+            df,
+            per_subject_df,
+            feature_importance_summary_df,
+            y_true,
+            y_pred,
+            summary_values,
+        ),
+        encoding="utf-8",
     )
-    SUMMARY_FILE.write_text(summary_text, encoding="utf-8")
     update_progress(summary_values)
     return summary_values
 
@@ -434,7 +393,6 @@ def main():
     print(f"- {PER_SUBJECT_FILE}")
     print(f"- {FEATURE_IMPORTANCE_FILE}")
     print(f"- {SUMMARY_FILE}")
-    print(f"- {PROGRESS_FILE}")
     print("\nMetriche aggregate:")
     print(
         f"Accuracy={summary_values['aggregate_accuracy']:.4f}, "
@@ -442,10 +400,6 @@ def main():
         f"Recall={summary_values['aggregate_recall']:.4f}, "
         f"F1={summary_values['aggregate_f1']:.4f}"
     )
-    if summary_values["predicts_single_class"]:
-        print("Attenzione: il modello predice una sola classe.")
-    else:
-        print("Il modello predice entrambe le classi.")
 
 
 if __name__ == "__main__":
