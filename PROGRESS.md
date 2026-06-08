@@ -281,3 +281,61 @@
 
 - File creato: `results/report_emg_chest_rf_top15_loso.html`
 - Contenuto: pipeline EMG chest completa, feature estratte, scelta top15, confronto con baseline all-feature, confusion matrix, performance per soggetto, feature importance e conclusione sul ruolo di EMG nel progetto.
+
+
+## Passo 16 - Estrazione feature RESP chest
+
+- Script creati:
+  - `src/extract_resp_chest_features_all.py`
+  - `src/validate_resp_chest_csv.py`
+- Segnale usato: `signal["chest"]["Resp"]`, campionato a `700 Hz`.
+- Cartella dati usata: `C:\Users\aranh\Downloads\WESAD\WESAD`.
+- Segmentazione coerente con BVP/EDA/ECG/EMG: finestre di `60 s`, passo di `30 s`, purezza label minima `0.70`.
+- Feature estratte: set ridotto non ridondante con statistiche sul segnale RESP filtrato bandpass `0.05-2 Hz`, derivate, rate picchi/trough, breath rate, variabilita' intervalli respiratori, ampiezze ciclo e feature spettrali Welch.
+- File generati:
+  - `data_features/resp_chest_features_all_60s.csv`
+  - `data_features/resp_chest_features_train_s2_s16_60s.csv`
+  - `data_features/resp_chest_features_test_s17_60s.csv`
+- Risultato estrazione:
+  - Shape completa: `(1069, 36)`
+  - Soggetti: `15`
+  - Distribuzione label: `0=748`, `1=321`
+  - NaN totali: `0`
+- Validazione: `src/validate_resp_chest_csv.py` passata, con finestre e label allineate al CSV BVP di riferimento.
+
+
+## Passo 17 - RESP chest + Random Forest LOSO
+
+- Script creato: `src/train_resp_chest_rf_loso.py`
+- Dataset usato: `data_features/resp_chest_features_all_60s.csv`
+- Feature usate: `resp_mean, resp_std, resp_range, resp_median, resp_iqr, resp_skew, resp_kurtosis, resp_derivative_std, resp_derivative_max_abs, resp_second_derivative_std, resp_peak_rate_per_min, resp_trough_rate_per_min, resp_peak_prominence_std, resp_trough_prominence_std, resp_breath_rate_mean, resp_breath_rate_std, resp_breath_rate_range, resp_interval_rmssd, resp_interval_sdnn, resp_interval_cv, resp_cycle_amplitude_mean, resp_cycle_amplitude_std, resp_dominant_rate_bpm, resp_mean_frequency_hz, resp_bandpower_0_15_0_40, resp_bandpower_0_40_0_75, resp_bandpower_0_75_2_00, resp_relative_power_0_75_2_00`
+- Validazione: Leave-One-Subject-Out per soggetto.
+- Modello baseline: `RandomForestClassifier(n_estimators=300, min_samples_leaf=2, class_weight="balanced", random_state=42)`
+- Scaling: non usato, perche' Random Forest non richiede `StandardScaler`.
+- Risultati principali:
+  - Accuracy media fold: 0.9019 (90.19%)
+  - F1 media fold: 0.8270 (82.70%)
+  - Accuracy aggregata globale: 0.9018 (90.18%)
+  - F1 aggregata globale: 0.8341 (83.41%)
+  - Confusion matrix aggregata: TN=700, FP=48, FN=57, TP=264
+- File generati:
+  - `results/resp_chest_rf_loso_per_subject.csv`
+  - `results/resp_chest_rf_feature_importance.csv`
+  - `results/resp_chest_rf_summary.txt`
+- Osservazioni:
+  - Il modello predice entrambe le classi.
+  - Soggetti problematici secondo soglia F1: S4, S6
+  - Questa esecuzione e' la baseline Random Forest RESP chest; non include ancora tuning degli iperparametri.
+
+## Report HTML RESP chest
+
+- File creato: `results/report_resp_chest_rf_loso.html`
+- Contenuto: pipeline RESP chest completa, scelta del set ridotto non ridondante, validazione CSV, Random Forest LOSO, confronto prima/dopo riduzione feature, confusion matrix, performance per soggetto, feature importance e spiegazione pronta per l'orale.
+
+## Report dettagliato progetto completo
+
+- File creati:
+  - `results/report_progetto_wesad_dettagliato.html`
+  - `results/report_progetto_wesad_dettagliato.pdf`
+- Lunghezza PDF: `14` pagine.
+- Contenuto: sintesi del progetto, coerenza con linee guida d'esame, dataset WESAD, mapping label, segmentazione, LOSO, feature extraction per ogni segnale, modelli, normalizzazione, risultati comparativi, focus RESP, analisi critica, confronto con letteratura, traccia per PowerPoint da 15 slide e domande possibili per l'orale.

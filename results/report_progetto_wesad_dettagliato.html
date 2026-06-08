@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progetto WESAD - Report dettagliato</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 17mm;
+    }
+
+    :root {
+      --ink: #172026;
+      --muted: #53606b;
+      --line: #d7dde5;
+      --bg: #f7f9fb;
+      --paper: #ffffff;
+      --accent: #0f6b63;
+      --accent-soft: #e7f3f1;
+      --warn: #8a4b00;
+      --warn-soft: #fff3df;
+      --good: #166534;
+      --good-soft: #ecfdf3;
+      --bad: #991b1b;
+      --bad-soft: #fef2f2;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13.5px;
+      line-height: 1.48;
+    }
+
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      background: var(--paper);
+      padding: 28px 34px 42px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 31px;
+      line-height: 1.12;
+    }
+
+    h2 {
+      margin: 30px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+      font-size: 21px;
+      line-height: 1.2;
+    }
+
+    h3 {
+      margin: 20px 0 8px;
+      font-size: 16px;
+    }
+
+    p {
+      margin: 7px 0 10px;
+    }
+
+    ul, ol {
+      margin: 7px 0 10px;
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    code {
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: #eef3f6;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 0.95em;
+    }
+
+    table {
+      width: 100%;
+      margin: 10px 0 16px;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef3f6;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      max-width: 850px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0 8px;
+    }
+
+    .metric,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      padding: 12px;
+      page-break-inside: avoid;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 20px;
+      line-height: 1.15;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .note,
+    .success,
+    .warning,
+    .danger {
+      margin: 12px 0;
+      padding: 10px 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      page-break-inside: avoid;
+    }
+
+    .success {
+      border-left-color: var(--good);
+      background: var(--good-soft);
+    }
+
+    .warning {
+      border-left-color: var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .danger {
+      border-left-color: var(--bad);
+      background: var(--bad-soft);
+    }
+
+    .page-break {
+      break-before: page;
+      page-break-before: always;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toc a {
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      main {
+        max-width: none;
+        padding: 0;
+      }
+
+      h2 {
+        break-after: avoid;
+      }
+
+      .panel,
+      .metric,
+      table {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Wearable Stress Detection con WESAD</h1>
+      <p class="subtitle">
+        Report dettagliato per preparazione della presentazione e studio orale.
+        Il progetto sviluppa una pipeline completa di machine learning per
+        classificare finestre fisiologiche come stress o non-stress usando segnali
+        wearable e chest del dataset WESAD.
+      </p>
+      <div class="meta">
+        <div class="metric"><span>Dataset</span><strong>WESAD</strong></div>
+        <div class="metric"><span>Task</span><strong>Stress vs non-stress</strong></div>
+        <div class="metric"><span>Validazione</span><strong>LOSO</strong></div>
+        <div class="metric"><span>Campioni</span><strong>1069 finestre</strong></div>
+      </div>
+      <p class="small">
+        File principali generati: <code>data_features/*.csv</code>,
+        <code>results/*_summary.txt</code>, report HTML dei singoli segnali e questo
+        documento complessivo.
+      </p>
+    </header>
+
+    <section>
+      <h2>1. Sintesi Esecutiva</h2>
+      <p>
+        L'obiettivo del progetto e' costruire una pipeline capace di riconoscere
+        stati psicofisiologici, in particolare lo stress, partendo da segnali
+        fisiologici acquisiti con sensori indossabili o medicali. Il dataset scelto
+        e' WESAD, un dataset da letteratura molto usato per stress detection, che
+        contiene segnali da wrist device e da sensori chest.
+      </p>
+      <p>
+        Il task finale implementato e' una classificazione binaria: finestre
+        <strong>stress</strong> contro finestre <strong>non-stress</strong>. Le label
+        originali WESAD usate sono: baseline, stress e amusement. Baseline e
+        amusement vengono mappate nella classe non-stress, mentre stress viene
+        mappato nella classe stress.
+      </p>
+      <div class="success">
+        <strong>Risultato piu' forte:</strong> il canale RESP chest con Random Forest
+        e 28 feature non ridondanti ottiene accuracy aggregata <strong>90.18%</strong>
+        e F1 aggregato sulla classe stress <strong>83.41%</strong>, valutato con
+        Leave-One-Subject-Out.
+      </div>
+      <p>
+        Il progetto non si limita a una singola prova: sono stati implementati piu'
+        segnali, piu' modelli, feature engineering, normalizzazione rispetto alla
+        baseline personale, riduzione delle feature e analisi per soggetto. Questo
+        risponde bene alle linee guida del progetto d'esame, che chiedono non solo
+        implementazione tecnica, ma anche analisi metodologica e confronto critico.
+      </p>
+    </section>
+
+    <section>
+      <h2>2. Coerenza Con Le Linee Guida Dell'Esame</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Richiesta delle linee guida</th>
+            <th>Come e' stata soddisfatta nel progetto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Selezione dataset da letteratura</td>
+            <td>Scelto WESAD, dataset noto per stress e affect detection con sensori fisiologici.</td>
+          </tr>
+          <tr>
+            <td>Selezione task di classificazione</td>
+            <td>Task binario: stress (<code>1</code>) vs non-stress (<code>0</code>).</td>
+          </tr>
+          <tr>
+            <td>Preprocessing e filtraggio</td>
+            <td>Segmentazione uniforme a 60 s, step 30 s, soglia di purezza label 0.70, filtri specifici per segnale.</td>
+          </tr>
+          <tr>
+            <td>Feature extraction</td>
+            <td>Feature statistiche, fisiologiche, HR/HRV, EDA tonica/fasica, EMG spettrale, RESP respiratoria.</td>
+          </tr>
+          <tr>
+            <td>Classificatori e confronto approcci</td>
+            <td>kNN per BVP/EDA, Random Forest per ECG/EMG/RESP, tuning e varianti con feature ridotte.</td>
+          </tr>
+          <tr>
+            <td>Validazione cruciale per dati fisiologici</td>
+            <td>Leave-One-Subject-Out, cioe' ogni soggetto viene testato come persona mai vista.</td>
+          </tr>
+          <tr>
+            <td>Normalizzazione del segnale/features</td>
+            <td>StandardScaler solo nei fold kNN; baseline normalization per EDA ed ECG; niente scaling per Random Forest.</td>
+          </tr>
+          <tr>
+            <td>Performance non solo accuracy</td>
+            <td>Precision, recall, F1, confusion matrix, feature importance e performance per soggetto.</td>
+          </tr>
+          <tr>
+            <td>Benchmark e letteratura</td>
+            <td>Replica indicativa BVP+kNN e confronto con valori del paper; estensioni personali su altri segnali.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page-break">
+      <h2>3. Dataset WESAD E Task Di Classificazione</h2>
+      <p>
+        WESAD contiene segnali fisiologici acquisiti durante condizioni sperimentali
+        diverse. Nel nostro progetto usiamo 15 soggetti validi: da <code>S2</code> a
+        <code>S17</code>, escludendo <code>S1</code> e <code>S12</code>. Tutti i
+        segnali vengono ricondotti alla stessa struttura di finestre temporali, in
+        modo che i risultati dei vari canali siano confrontabili.
+      </p>
+      <h3>3.1 Label usate</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Label WESAD originale</th>
+            <th>Significato</th>
+            <th>Label binaria nel progetto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>1</code></td><td>Baseline / riposo</td><td><code>0</code> non-stress</td></tr>
+          <tr><td><code>2</code></td><td>Stress</td><td><code>1</code> stress</td></tr>
+          <tr><td><code>3</code></td><td>Amusement / emozione positiva</td><td><code>0</code> non-stress</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        Questo punto va spiegato bene all'orale: il task non e' solo stress vs
+        baseline, ma stress vs non-stress. La classe non-stress include sia baseline
+        sia amusement.
+      </div>
+      <h3>3.2 Segmentazione</h3>
+      <p>
+        Tutti i segnali vengono segmentati in finestre da <code>60 secondi</code>,
+        con passo da <code>30 secondi</code>. Per ogni finestra viene calcolata la
+        label maggioritaria. La finestra viene tenuta solo se la label maggioritaria
+        ha purezza almeno <code>0.70</code>. Questo evita di allenare il modello su
+        finestre ambigue, ad esempio finestre che attraversano transizioni tra fasi.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Parametro</th>
+            <th>Valore</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Window size</td><td>60 s</td><td>Abbastanza lunga per stimare feature fisiologiche stabili.</td></tr>
+          <tr><td>Step</td><td>30 s</td><td>Overlap del 50%, aumenta campioni senza cambiare troppo il contenuto.</td></tr>
+          <tr><td>Purezza label</td><td>0.70</td><td>Riduce finestre miste o ambigue.</td></tr>
+          <tr><td>Campioni finali</td><td>1069</td><td>Stesso numero di finestre per i segnali principali.</td></tr>
+          <tr><td>Distribuzione classi</td><td>748 non-stress, 321 stress</td><td>Dataset sbilanciato verso non-stress.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. Pipeline Generale</h2>
+      <p>
+        La pipeline e' stata progettata in modo modulare: per ogni segnale esiste
+        uno script di estrazione feature, uno script di validazione del CSV e uno
+        script di training/validazione del modello. Questo rende il progetto
+        controllabile e riproducibile.
+      </p>
+      <ol>
+        <li>Caricamento dei pickle WESAD.</li>
+        <li>Selezione del segnale da analizzare.</li>
+        <li>Allineamento con le label del dataset.</li>
+        <li>Segmentazione temporale in finestre.</li>
+        <li>Filtraggio del segnale quando necessario.</li>
+        <li>Estrazione feature.</li>
+        <li>Validazione del CSV: colonne, NaN, valori infiniti, label, soggetti, allineamento finestre.</li>
+        <li>Training del modello.</li>
+        <li>Validazione Leave-One-Subject-Out.</li>
+        <li>Analisi di metriche, confusion matrix, soggetti difficili e feature importance.</li>
+      </ol>
+      <div class="warning">
+        Regola anti-leakage: colonne come <code>subject</code>, <code>start_sec</code>,
+        <code>end_sec</code>, <code>original_label</code>, <code>label</code> e
+        <code>label_purity</code> non vengono usate come feature. Sono metadata o target.
+      </div>
+    </section>
+
+    <section class="page-break">
+      <h2>5. Strategia Di Validazione: Leave-One-Subject-Out</h2>
+      <p>
+        Nei dati fisiologici il problema piu' importante e' la variabilita' tra
+        persone. Una validazione casuale riga-per-riga sarebbe troppo ottimistica,
+        perche' finestre dello stesso soggetto potrebbero finire sia nel training
+        sia nel test. In quel caso il modello imparerebbe anche caratteristiche
+        personali del soggetto, non solo lo stress.
+      </p>
+      <p>
+        Per questo e' stata usata la validazione <strong>Leave-One-Subject-Out</strong>.
+        A ogni fold si lascia fuori un soggetto intero come test set e si allena il
+        modello sui restanti soggetti. Se ci sono 15 soggetti, ci sono 15 fold.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Metodo</th>
+            <th>Come funziona</th>
+            <th>Perche' e' adatto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>LOSO</td>
+            <td>Training su 14 soggetti, test sul soggetto escluso.</td>
+            <td>Simula l'applicazione reale su una persona nuova.</td>
+          </tr>
+          <tr>
+            <td>Aggregazione metriche</td>
+            <td>Si raccolgono tutte le predizioni dei fold e si calcolano accuracy, precision, recall, F1.</td>
+            <td>Da una visione globale su tutte le finestre testate.</td>
+          </tr>
+          <tr>
+            <td>Analisi per soggetto</td>
+            <td>Ogni fold produce metriche sul soggetto lasciato fuori.</td>
+            <td>Permette di vedere soggetti problematici.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Questa scelta e' metodologicamente forte e va sottolineata nella presentazione:
+        il modello non viene testato su finestre di soggetti gia' visti, ma su
+        soggetti completamente esclusi dal training.
+      </p>
+    </section>
+
+    <section>
+      <h2>6. Segnali Analizzati</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Segnale</th>
+            <th>Posizione</th>
+            <th>Frequenza</th>
+            <th>Modello principale</th>
+            <th>Ruolo nel progetto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>BVP</td>
+            <td>Wrist</td>
+            <td>64 Hz</td>
+            <td>kNN</td>
+            <td>Baseline vicina al paper e confronto con letteratura.</td>
+          </tr>
+          <tr>
+            <td>EDA</td>
+            <td>Wrist</td>
+            <td>4 Hz</td>
+            <td>kNN</td>
+            <td>Segnale forte per stress, migliorato con baseline normalization.</td>
+          </tr>
+          <tr>
+            <td>ECG</td>
+            <td>Chest</td>
+            <td>700 Hz</td>
+            <td>Random Forest</td>
+            <td>Feature cardiache e HRV; grande beneficio dalla normalizzazione personale.</td>
+          </tr>
+          <tr>
+            <td>EMG</td>
+            <td>Chest</td>
+            <td>700 Hz</td>
+            <td>Random Forest</td>
+            <td>Segnale piu' debole, utile come confronto negativo e analisi critica.</td>
+          </tr>
+          <tr>
+            <td>RESP</td>
+            <td>Chest</td>
+            <td>700 Hz</td>
+            <td>Random Forest</td>
+            <td>Risultato finale piu' forte, con feature ridotte non ridondanti.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page-break">
+      <h2>7. Feature Extraction Per Segnale</h2>
+      <h3>7.1 BVP wrist</h3>
+      <p>
+        BVP misura variazioni di volume sanguigno periferico. Dal BVP sono state
+        estratte feature statistiche e fisiologiche: media, deviazione standard,
+        min, max, range, mediana, IQR, RMS, energia, skewness, kurtosis, numero di
+        picchi, intervalli tra battiti stimati, heart rate e indici HRV semplici.
+      </p>
+      <p>
+        BVP e' importante perche' permette una replica indicativa della pipeline
+        riportata nel paper WESAD con kNN. Il nostro risultato BVP+kNN e' vicino
+        all'accuracy del riferimento, anche se il F1 differisce.
+      </p>
+
+      <h3>7.2 EDA wrist</h3>
+      <p>
+        EDA misura l'attivita' elettrodermica, fortemente legata al sistema nervoso
+        simpatico. Sono state estratte feature statistiche, slope, derivate, componente
+        tonica, componente fasica e SCR rilevate tramite picchi. EDA e' uno dei
+        segnali piu' rilevanti per stress detection.
+      </p>
+      <p>
+        Per EDA sono state provate feature complete, feature ridotte e normalizzazione
+        rispetto alla baseline personale. La versione migliore usa feature ridotte
+        piu' delta e z-score rispetto alla baseline del soggetto.
+      </p>
+
+      <h3>7.3 ECG chest</h3>
+      <p>
+        ECG permette di estrarre informazioni cardiache piu' precise rispetto al BVP.
+        Il segnale viene filtrato, poi si stimano R-peak, intervalli RR, heart rate
+        e feature HRV come RMSSD, SDNN, pNN50 e CVNN. Sono state testate feature
+        assolute e feature normalizzate rispetto alla baseline personale.
+      </p>
+      <p>
+        La normalizzazione personale e' stata molto importante: il modello assoluto
+        ECG era discreto, ma la versione baseline z-score ha migliorato drasticamente
+        F1 e accuracy.
+      </p>
+
+      <h3>7.4 EMG chest</h3>
+      <p>
+        EMG misura attivita' muscolare. Sono state estratte feature statistiche,
+        ampiezza rettificata, IEMG, MAV, waveform length, zero crossing, slope sign
+        changes, Willison amplitude, feature Hjorth e feature spettrali Welch.
+      </p>
+      <p>
+        EMG si e' rivelato meno forte degli altri segnali. Questo pero' e' utile nel
+        progetto: mostra che non tutti i canali sono ugualmente informativi per lo
+        stress e giustifica l'analisi comparativa.
+      </p>
+
+      <h3>7.5 RESP chest</h3>
+      <p>
+        RESP misura la respirazione toracica. Il segnale viene filtrato tra
+        <code>0.05</code> e <code>2 Hz</code>, poi vengono estratte feature su
+        ampiezza, variabilita', derivate, picchi/trough respiratori, breath rate,
+        intervalli respiratori e spettro Welch. La prima versione aveva 52 feature
+        candidate, poi ridotte a 28 per eliminare ridondanze.
+      </p>
+      <div class="success">
+        RESP e' risultato il canale piu' forte nella versione finale: poche feature
+        interpretabili e ottima performance in LOSO.
+      </div>
+    </section>
+
+    <section class="page-break">
+      <h2>8. Modelli E Normalizzazione</h2>
+      <h3>8.1 kNN</h3>
+      <p>
+        kNN classifica una finestra guardando i campioni piu' vicini nello spazio
+        delle feature. Per questo e' molto sensibile alla scala delle feature: una
+        feature con valori grandi puo' dominare la distanza. Nei modelli kNN e'
+        stato quindi usato <code>StandardScaler</code>, fittato solo sul training
+        fold per evitare leakage.
+      </p>
+      <p>
+        La configurazione principale e' <code>KNeighborsClassifier(n_neighbors=9,
+        weights="distance")</code>. Il peso distance da piu' importanza ai vicini
+        piu' simili.
+      </p>
+
+      <h3>8.2 Random Forest</h3>
+      <p>
+        Random Forest combina molti alberi decisionali. Ogni albero impara split
+        sulle feature e la previsione finale e' ottenuta per voto. E' adatta a
+        feature non lineari e non richiede scaling, perche' gli alberi non usano
+        distanze euclidee.
+      </p>
+      <p>
+        La configurazione usata per i modelli RF principali e':
+        <code>n_estimators=300</code>, <code>min_samples_leaf=2</code>,
+        <code>class_weight="balanced"</code>, <code>random_state=42</code>.
+        Il parametro <code>class_weight="balanced"</code> aiuta perche' le classi
+        sono sbilanciate: ci sono piu' finestre non-stress che stress.
+      </p>
+
+      <h3>8.3 Baseline normalization</h3>
+      <p>
+        Per EDA ed ECG e' stata testata la normalizzazione rispetto alla baseline
+        personale. Per ogni soggetto si usano solo finestre con
+        <code>original_label=1</code> per calcolare media e deviazione standard di
+        alcune feature. Poi si costruiscono:
+      </p>
+      <ul>
+        <li><code>baseline_delta</code>: valore finestra meno media baseline personale.</li>
+        <li><code>baseline_zscore</code>: delta diviso deviazione standard baseline personale.</li>
+      </ul>
+      <p>
+        Questa scelta e' metodologicamente difendibile se si assume una fase iniziale
+        di calibrazione a riposo per il soggetto. Non vengono usate finestre stress
+        per costruire la baseline.
+      </p>
+    </section>
+
+    <section>
+      <h2>9. Risultati Principali</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Segnale / modello</th>
+            <th>Feature</th>
+            <th>Accuracy</th>
+            <th>Precision stress</th>
+            <th>Recall stress</th>
+            <th>F1 stress</th>
+            <th>Confusion matrix</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>BVP wrist + kNN LOSO</td>
+            <td>25</td>
+            <td>82.79%</td>
+            <td>72.03%</td>
+            <td>69.78%</td>
+            <td>70.89%</td>
+            <td>TN=661, FP=87, FN=97, TP=224</td>
+          </tr>
+          <tr>
+            <td>EDA wrist + kNN baseline norm</td>
+            <td>36</td>
+            <td>89.52%</td>
+            <td>88.28%</td>
+            <td>75.08%</td>
+            <td>81.14%</td>
+            <td>TN=716, FP=32, FN=80, TP=241</td>
+          </tr>
+          <tr>
+            <td>ECG chest + RF baseline z-score</td>
+            <td>12</td>
+            <td>86.44%</td>
+            <td>83.08%</td>
+            <td>68.85%</td>
+            <td>75.30%</td>
+            <td>TN=703, FP=45, FN=100, TP=221</td>
+          </tr>
+          <tr>
+            <td>EMG chest + RF top15</td>
+            <td>15</td>
+            <td>69.78%</td>
+            <td>49.70%</td>
+            <td>51.09%</td>
+            <td>50.38%</td>
+            <td>TN=582, FP=166, FN=157, TP=164</td>
+          </tr>
+          <tr>
+            <td><strong>RESP chest + RF ridotta</strong></td>
+            <td><strong>28</strong></td>
+            <td><strong>90.18%</strong></td>
+            <td><strong>84.62%</strong></td>
+            <td><strong>82.24%</strong></td>
+            <td><strong>83.41%</strong></td>
+            <td><strong>TN=700, FP=48, FN=57, TP=264</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Il ranking finale mostra che RESP e EDA sono i canali piu' efficaci in questa
+        pipeline. ECG diventa buono quando viene normalizzato sulla baseline personale.
+        BVP fornisce una baseline solida e vicina al paper. EMG e' meno efficace, ma
+        utile per dimostrare che la scelta del segnale conta.
+      </p>
+    </section>
+
+    <section class="page-break">
+      <h2>10. Focus Sul Miglior Risultato: RESP Chest</h2>
+      <p>
+        Il canale RESP e' stato l'ultimo aggiunto ed e' diventato il risultato piu'
+        forte. La prima estrazione produceva 52 feature candidate. Dopo un controllo
+        sulla ridondanza, sono state mantenute 28 feature effettive. Il CSV finale
+        ha 36 colonne totali: 28 feature e 8 metadata/label.
+      </p>
+      <h3>10.1 Perche' eliminare feature ridondanti</h3>
+      <p>
+        Troppe feature non sono sempre un vantaggio. Alcune colonne erano
+        deterministiche o quasi duplicate: ad esempio conteggi e rate su finestre
+        sempre da 60 s, oppure frequenza dominante in Hz e in bpm. Rimuoverle rende
+        il modello piu' leggero e piu' spiegabile.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Versione RESP</th>
+            <th>N feature</th>
+            <th>Colonne CSV</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Prima versione</td>
+            <td>52</td>
+            <td>60</td>
+            <td>89.71%</td>
+            <td>83.71%</td>
+            <td>81.62%</td>
+            <td>82.65%</td>
+          </tr>
+          <tr>
+            <td>Versione finale ridotta</td>
+            <td>28</td>
+            <td>36</td>
+            <td>90.18%</td>
+            <td>84.62%</td>
+            <td>82.24%</td>
+            <td>83.41%</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="success">
+        La riduzione ha migliorato leggermente tutte le metriche principali. Questo
+        e' un buon argomento metodologico: il modello finale non e' solo piu'
+        accurato, ma anche piu' semplice.
+      </div>
+
+      <h3>10.2 Feature RESP piu' importanti</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Feature</th>
+            <th>Importanza media</th>
+            <th>Interpretazione</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>resp_bandpower_0_75_2_00</code></td><td>0.1686</td><td>Potenza nella banda respiratoria alta.</td></tr>
+          <tr><td>2</td><td><code>resp_relative_power_0_75_2_00</code></td><td>0.1233</td><td>Quota relativa di potenza ad alta frequenza.</td></tr>
+          <tr><td>3</td><td><code>resp_interval_cv</code></td><td>0.1005</td><td>Variabilita' normalizzata degli intervalli respiratori.</td></tr>
+          <tr><td>4</td><td><code>resp_second_derivative_std</code></td><td>0.0984</td><td>Irregolarita' e accelerazioni del segnale.</td></tr>
+          <tr><td>5</td><td><code>resp_breath_rate_std</code></td><td>0.0723</td><td>Variabilita' del ritmo respiratorio.</td></tr>
+          <tr><td>6</td><td><code>resp_interval_rmssd</code></td><td>0.0660</td><td>Variazione ciclo-ciclo degli intervalli.</td></tr>
+          <tr><td>7</td><td><code>resp_interval_sdnn</code></td><td>0.0432</td><td>Variabilita' globale degli intervalli.</td></tr>
+          <tr><td>8</td><td><code>resp_breath_rate_range</code></td><td>0.0415</td><td>Differenza tra breath rate massimo e minimo.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Il modello non si basa solo sul breath rate medio. Le feature piu' importanti
+        catturano variabilita', irregolarita' e componenti ad alta frequenza. Questo
+        e' coerente con l'idea che lo stress possa alterare stabilita' e pattern
+        respiratorio piu' che semplicemente aumentare la frequenza media.
+      </p>
+    </section>
+
+    <section>
+      <h2>11. Analisi Critica Dei Risultati</h2>
+      <h3>11.1 Accuracy non basta</h3>
+      <p>
+        Il dataset e' sbilanciato: 748 finestre non-stress contro 321 finestre stress.
+        Un modello potrebbe ottenere accuracy alta predicendo spesso non-stress.
+        Per questo sono state sempre riportate precision, recall e F1 sulla classe
+        stress.
+      </p>
+      <ul>
+        <li><strong>Precision stress:</strong> tra le finestre predette stress, quante sono davvero stress.</li>
+        <li><strong>Recall stress:</strong> tra le finestre davvero stress, quante vengono riconosciute.</li>
+        <li><strong>F1 stress:</strong> media armonica tra precision e recall, utile quando le classi sono sbilanciate.</li>
+      </ul>
+
+      <h3>11.2 Falsi positivi e falsi negativi</h3>
+      <p>
+        Nel modello RESP finale ci sono 48 falsi positivi e 57 falsi negativi.
+        I falsi negativi sono finestre stress classificate come non-stress. In
+        applicazioni reali di stress detection, i falsi negativi sono spesso piu'
+        critici perche' rappresentano stress non rilevato.
+      </p>
+      <p>
+        Per questo il recall stress e' importante. RESP raggiunge recall 82.24%,
+        migliore di BVP, EDA baseline norm, ECG baseline norm ed EMG top15 nella
+        nostra comparazione finale.
+      </p>
+
+      <h3>11.3 Soggetti difficili</h3>
+      <p>
+        L'analisi per soggetto mostra che alcuni soggetti sono piu' difficili.
+        Nel modello RESP i soggetti sotto soglia sono <code>S4</code> e
+        <code>S6</code>. In particolare S6 ha molti falsi negativi. Questo indica
+        che la risposta fisiologica allo stress puo' essere molto individuale.
+      </p>
+      <div class="note">
+        Questa osservazione rafforza la scelta di LOSO e delle strategie di baseline
+        normalization: nei dati fisiologici la variabilita' individuale e' una parte
+        centrale del problema.
+      </div>
+    </section>
+
+    <section class="page-break">
+      <h2>12. Confronto Con La Letteratura E Replicabilita'</h2>
+      <p>
+        Le linee guida chiedono di consultare la letteratura e tentare una replica
+        della pipeline del paper scelto. Nel progetto, BVP+kNN e' stato usato come
+        punto di partenza vicino al benchmark WESAD. La replica e' indicativa,
+        perche' non tutti i dettagli della pipeline originale sono necessariamente
+        identici: filtraggio, feature esatte, gestione transizioni, finestre e
+        validazione possono cambiare.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Confronto BVP+kNN</th>
+            <th>Accuracy</th>
+            <th>F1</th>
+            <th>Nota</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Riferimento paper WESAD indicativo</td>
+            <td>circa 82.06%</td>
+            <td>circa 78.94%</td>
+            <td>Valori usati come benchmark di massima.</td>
+          </tr>
+          <tr>
+            <td>Nostra pipeline BVP+kNN</td>
+            <td>82.79%</td>
+            <td>70.89%</td>
+            <td>Accuracy molto vicina; F1 inferiore, probabilmente per differenze di feature/label/validazione.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Dopo questa baseline, il progetto procede con modifiche personali: EDA con
+        feature ridotte e baseline normalization, ECG con z-score personale, EMG con
+        top15, RESP con feature respiratorie ridotte. Questa evoluzione e' coerente
+        con la parte opzionale delle linee guida, che invita a proporre nuove feature
+        o strategie per migliorare o alleggerire il modello.
+      </p>
+    </section>
+
+    <section>
+      <h2>13. Cosa Dire Nella Presentazione</h2>
+      <p>
+        Il PowerPoint deve essere sintetico, massimo 15 slide. Questo PDF contiene
+        molto piu' dettaglio; in classe conviene raccontare solo il filo logico.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Slide</th>
+            <th>Contenuto consigliato</th>
+            <th>Messaggio da dire</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Titolo e obiettivo</td><td>Classificare stress vs non-stress da segnali fisiologici WESAD.</td></tr>
+          <tr><td>2</td><td>Dataset WESAD</td><td>Segnali wrist e chest, task binario, soggetti esclusi.</td></tr>
+          <tr><td>3</td><td>Pipeline generale</td><td>Segmentazione, filtraggio, feature extraction, validazione CSV, training.</td></tr>
+          <tr><td>4</td><td>Label e finestre</td><td>Baseline/amusement = non-stress, stress = stress; finestre 60s/30s.</td></tr>
+          <tr><td>5</td><td>Validazione LOSO</td><td>Ogni soggetto e' testato come persona nuova.</td></tr>
+          <tr><td>6</td><td>BVP baseline</td><td>Replica indicativa con kNN e confronto con paper.</td></tr>
+          <tr><td>7</td><td>EDA</td><td>EDA migliora con baseline normalization.</td></tr>
+          <tr><td>8</td><td>ECG</td><td>HRV e z-score personale aumentano molto la performance.</td></tr>
+          <tr><td>9</td><td>EMG</td><td>Canale meno forte, utile come confronto critico.</td></tr>
+          <tr><td>10</td><td>RESP</td><td>Canale migliore, 28 feature non ridondanti.</td></tr>
+          <tr><td>11</td><td>Tabella risultati</td><td>Confronto accuracy, precision, recall, F1.</td></tr>
+          <tr><td>12</td><td>Confusion matrix RESP</td><td>Spiegare falsi positivi/falsi negativi e recall stress.</td></tr>
+          <tr><td>13</td><td>Feature importance RESP</td><td>Variabilita' respiratoria e potenza alta frequenza sono centrali.</td></tr>
+          <tr><td>14</td><td>Analisi critica</td><td>Soggetti difficili, limiti, differenze dalla letteratura.</td></tr>
+          <tr><td>15</td><td>Conclusioni</td><td>Pipeline coerente, RESP/EDA migliori, LOSO robusto.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page-break">
+      <h2>14. Domande Possibili Della Prof E Risposte</h2>
+      <h3>Perche' avete usato LOSO invece di train/test casuale?</h3>
+      <p>
+        Perche' i dati fisiologici sono fortemente dipendenti dal soggetto. Un
+        split casuale potrebbe mettere finestre dello stesso soggetto sia in training
+        sia in test, producendo una stima troppo ottimistica. LOSO testa il modello
+        su soggetti mai visti.
+      </p>
+
+      <h3>Perche' baseline e amusement sono entrambe non-stress?</h3>
+      <p>
+        Il task scelto e' stress vs non-stress. Baseline rappresenta riposo, amusement
+        rappresenta uno stato positivo non stressante. Entrambe sono quindi mappate
+        a classe 0. Questa scelta va dichiarata perche' e' diversa da stress vs
+        baseline puro.
+      </p>
+
+      <h3>Perche' non avete usato solo accuracy?</h3>
+      <p>
+        Perche' il dataset e' sbilanciato: ci sono molte piu' finestre non-stress.
+        Accuracy puo' essere alta anche se il modello riconosce male lo stress.
+        Precision, recall e F1 sulla classe stress sono piu' informative.
+      </p>
+
+      <h3>Perche' kNN viene scalato e Random Forest no?</h3>
+      <p>
+        kNN usa distanze, quindi la scala delle feature influenza direttamente il
+        modello. Random Forest usa split ad albero, quindi non richiede scaling.
+        Quando abbiamo usato StandardScaler, lo abbiamo fittato solo sul training
+        fold per evitare leakage.
+      </p>
+
+      <h3>La baseline normalization usa informazioni del test?</h3>
+      <p>
+        Usa solo finestre baseline del soggetto test, non finestre stress. Questo
+        equivale ad assumere una fase di calibrazione a riposo disponibile prima
+        dell'uso del sistema. E' un'assunzione esplicita e fisiologicamente sensata.
+      </p>
+
+      <h3>Perche' RESP funziona cosi' bene?</h3>
+      <p>
+        Perche' lo stress puo' modificare ritmo, variabilita' e regolarita' della
+        respirazione. Le feature piu' importanti RESP catturano proprio variabilita'
+        degli intervalli, potenza in banda alta e irregolarita' del segnale.
+      </p>
+
+      <h3>Perche' EMG va peggio?</h3>
+      <p>
+        EMG puo' dipendere molto da postura, movimento e contrazioni muscolari non
+        direttamente legate allo stress. Nel nostro task e con questa pipeline e'
+        meno discriminativo. Il risultato e' comunque utile per il confronto tra
+        sensori.
+      </p>
+
+      <h3>Perche' avete tolto feature RESP ridondanti?</h3>
+      <p>
+        Per rendere il modello piu' semplice e meno rumoroso. Alcune feature erano
+        duplicati informativi: per esempio conteggio e rate su finestre sempre da
+        60 secondi. Dopo la riduzione, le metriche sono anche migliorate.
+      </p>
+
+      <h3>Qual e' il contributo personale rispetto al paper?</h3>
+      <p>
+        Oltre alla baseline BVP+kNN, abbiamo implementato pipeline multi-segnale,
+        feature engineering specifico, baseline normalization per EDA/ECG, riduzione
+        feature per EMG/RESP e analisi comparativa con LOSO.
+      </p>
+    </section>
+
+    <section>
+      <h2>15. Limiti E Sviluppi Futuri</h2>
+      <ul>
+        <li>
+          <strong>Dataset limitato:</strong> 15 soggetti sono utili per un progetto,
+          ma non bastano per conclusioni cliniche generali.
+        </li>
+        <li>
+          <strong>Task binario:</strong> abbiamo unito baseline e amusement in
+          non-stress. Un lavoro futuro potrebbe fare classificazione multi-classe.
+        </li>
+        <li>
+          <strong>Sensor fusion:</strong> il progetto confronta segnali separati.
+          Una possibile estensione e' combinare RESP+EDA o RESP+ECG.
+        </li>
+        <li>
+          <strong>Tuning limitato:</strong> abbiamo mantenuto modelli interpretabili
+          e poco ottimizzati. Un tuning piu' ampio potrebbe migliorare alcuni segnali.
+        </li>
+        <li>
+          <strong>Soggetti difficili:</strong> alcuni soggetti restano problematici,
+          confermando la variabilita' individuale della risposta allo stress.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>16. Conclusione</h2>
+      <p>
+        Il progetto e' coerente con le linee guida dell'esame: parte da un dataset
+        da letteratura, implementa preprocessing, filtraggio, feature extraction,
+        classificatori, validazione subject-independent e analisi delle metriche.
+        Inoltre contiene elementi sperimentali personali, come normalizzazione
+        rispetto alla baseline, riduzione feature e confronto tra segnali.
+      </p>
+      <p>
+        Il risultato finale piu' convincente e' RESP chest + Random Forest con 28
+        feature non ridondanti: accuracy 90.18%, precision stress 84.62%, recall
+        stress 82.24% e F1 stress 83.41%. EDA baseline-normalized e' il secondo
+        risultato piu' forte, mentre ECG dimostra chiaramente l'importanza della
+        normalizzazione personale.
+      </p>
+      <p>
+        Il messaggio finale da portare in classe e': <strong>nei dati fisiologici
+        non basta scegliere un classificatore; contano moltissimo validazione per
+        soggetto, normalizzazione individuale, scelta del segnale e feature
+        interpretabili.</strong>
+      </p>
+    </section>
+  </main>
+</body>
+</html>

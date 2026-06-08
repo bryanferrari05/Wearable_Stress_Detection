@@ -1,0 +1,81 @@
+# RESP chest + Random Forest LOSO summary
+
+Dataset usato: data_features\resp_chest_features_all_60s.csv
+Feature usate (28): resp_mean, resp_std, resp_range, resp_median, resp_iqr, resp_skew, resp_kurtosis, resp_derivative_std, resp_derivative_max_abs, resp_second_derivative_std, resp_peak_rate_per_min, resp_trough_rate_per_min, resp_peak_prominence_std, resp_trough_prominence_std, resp_breath_rate_mean, resp_breath_rate_std, resp_breath_rate_range, resp_interval_rmssd, resp_interval_sdnn, resp_interval_cv, resp_cycle_amplitude_mean, resp_cycle_amplitude_std, resp_dominant_rate_bpm, resp_mean_frequency_hz, resp_bandpower_0_15_0_40, resp_bandpower_0_40_0_75, resp_bandpower_0_75_2_00, resp_relative_power_0_75_2_00
+Feature escluse per evitare leakage: subject, start_sec, end_sec, window_sec, step_sec, original_label, label, label_purity
+Modello usato: RandomForestClassifier
+n_estimators = 300
+max_depth = None
+min_samples_leaf = 2
+class_weight = balanced
+random_state = 42
+Metodo di validazione: Leave-One-Subject-Out
+Nota LOSO: ogni fold allena su tutti i soggetti tranne quello testato.
+Scaling: non usato, perche' Random Forest non richiede StandardScaler.
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.9019 (90.19%)
+Precision media sui fold: 0.8676 (86.76%)
+Recall media sui fold: 0.8220 (82.20%)
+F1 media sui fold: 0.8270 (82.70%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.9018 (90.18%)
+Precision aggregata globale: 0.8462 (84.62%)
+Recall aggregata globale: 0.8224 (82.24%)
+F1 aggregata globale: 0.8341 (83.41%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[700  48]
+ [ 57 264]]
+TN=700, FP=48, FN=57, TP=264
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.92      0.94      0.93       748
+           1       0.85      0.82      0.83       321
+
+    accuracy                           0.90      1069
+   macro avg       0.89      0.88      0.88      1069
+weighted avg       0.90      0.90      0.90      1069
+
+
+## Controlli predizioni
+Classi predette globalmente: [0, 1]
+Il modello predice entrambe le classi.
+
+## Top feature Random Forest
+                      feature  mean_importance  std_importance
+     resp_bandpower_0_75_2_00         0.168592        0.007802
+resp_relative_power_0_75_2_00         0.123334        0.014790
+             resp_interval_cv         0.100547        0.009383
+   resp_second_derivative_std         0.098436        0.011617
+         resp_breath_rate_std         0.072269        0.008490
+          resp_interval_rmssd         0.065965        0.005728
+           resp_interval_sdnn         0.043198        0.002381
+       resp_breath_rate_range         0.041526        0.003292
+                    resp_skew         0.033119        0.005700
+     resp_peak_prominence_std         0.028374        0.003028
+     resp_bandpower_0_40_0_75         0.026439        0.003950
+                  resp_median         0.021700        0.002575
+   resp_trough_prominence_std         0.017898        0.002345
+      resp_derivative_max_abs         0.016240        0.001356
+                resp_kurtosis         0.015164        0.001689
+     resp_cycle_amplitude_std         0.015124        0.002713
+                     resp_iqr         0.012995        0.001688
+          resp_derivative_std         0.012882        0.001319
+                     resp_std         0.012868        0.001101
+    resp_cycle_amplitude_mean         0.011855        0.001367
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.6770).
+- S4: accuracy=0.8310, precision=0.8462, recall=0.5238, f1=0.6471, TN=48, FP=2, FN=10, TP=11
+- S6: accuracy=0.7639, precision=0.7500, recall=0.2857, f1=0.4138, TN=49, FP=2, FN=15, TP=6
+
+## Nota
+Questa e' la baseline RESP chest con Random Forest. Il modello usa solo feature estratte dal segnale respiratorio chest e non include ancora tuning degli iperparametri.

@@ -2,5 +2,8 @@
 .\.venv\Scripts\python.exe src\validate_ecg_chest_csv.py
 .\.venv\Scripts\python.exe src\train_ecg_chest_rf_loso.py
 .\.venv\Scripts\python.exe src\train_ecg_chest_rf_baseline_norm.py
+.\.venv\Scripts\python.exe src\extract_resp_chest_features_all.py
+.\.venv\Scripts\python.exe src\validate_resp_chest_csv.py
+.\.venv\Scripts\python.exe src\train_resp_chest_rf_loso.py
 .\.venv\Scripts\python.exe src\demo_predict_bvp.py --rows 15
 .\.venv\Scripts\python.exe src\demo_predict_eda.py --rows 15
