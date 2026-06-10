@@ -24,23 +24,6 @@
   - Soggetti problematici secondo soglia F1: S15, S9
   - Confronto paper indicativo: BVP + kNN circa 82.06% accuracy e 78.94% F1.
 
-## Tuning leggero kNN BVP
-
-- Script creato: `src/tune_bvp_knn_loso.py`
-- Output:
-  - `results/bvp_knn_tuning_results.csv`
-  - `results/bvp_knn_tuning_summary.txt`
-- Esperimenti: `k=[1, 3, 5, 7, 9, 11, 15, 21]` con `weights=['uniform', 'distance']`
-- Nota: tuning eseguito prima dell'aggiunta delle feature peak detection/HRV.
-- Validazione: Leave-One-Subject-Out, con `StandardScaler` fittato solo sul training fold.
-- Migliore configurazione per F1 aggregato: `k=21`, `weights="distance"`
-- Risultati migliori:
-  - Accuracy aggregata: 0.7774 (77.74%)
-  - Precision aggregata: 0.6751 (67.51%)
-  - Recall aggregata: 0.4984 (49.84%)
-  - F1 aggregato: 0.5735 (57.35%)
-  - Confusion matrix: TN=671, FP=77, FN=161, TP=160
-
 ## Report HTML
 
 - File creato: `results/report_bvp_knn_loso.html`

@@ -1,9 +1,24 @@
-.\.venv\Scripts\python.exe src\extract_ecg_chest_features_all.py
+# Comandi utili per controllare e riprodurre il progetto
+
+# 1) Validazione dei CSV delle feature gia' presenti in data_features/
+.\.venv\Scripts\python.exe src\validate_bvp_csv.py
+.\.venv\Scripts\python.exe src\validate_eda_csv.py
 .\.venv\Scripts\python.exe src\validate_ecg_chest_csv.py
-.\.venv\Scripts\python.exe src\train_ecg_chest_rf_loso.py
-.\.venv\Scripts\python.exe src\train_ecg_chest_rf_baseline_norm.py
-.\.venv\Scripts\python.exe src\extract_resp_chest_features_all.py
+.\.venv\Scripts\python.exe src\validate_emg_chest_csv.py
 .\.venv\Scripts\python.exe src\validate_resp_chest_csv.py
+
+# 2) Training e valutazione dei modelli principali
+.\.venv\Scripts\python.exe src\train_bvp_knn_loso.py
+.\.venv\Scripts\python.exe src\train_eda_knn_loso_baseline_norm.py
+.\.venv\Scripts\python.exe src\train_ecg_chest_rf_baseline_norm.py
+.\.venv\Scripts\python.exe src\train_emg_chest_rf_loso.py
+.\.venv\Scripts\python.exe src\train_emg_chest_rf_top15_loso.py
 .\.venv\Scripts\python.exe src\train_resp_chest_rf_loso.py
-.\.venv\Scripts\python.exe src\demo_predict_bvp.py --rows 15
-.\.venv\Scripts\python.exe src\demo_predict_eda.py --rows 15
+
+# 3) Rigenerazione delle feature dai dati raw WESAD
+# Richiede la cartella WESAD/S*/S*.pkl disponibile localmente.
+.\.venv\Scripts\python.exe src\extract_bvp_features_all.py
+.\.venv\Scripts\python.exe src\extract_eda_features_all.py
+.\.venv\Scripts\python.exe src\extract_ecg_chest_features_all.py
+.\.venv\Scripts\python.exe src\extract_emg_chest_features_all.py
+.\.venv\Scripts\python.exe src\extract_resp_chest_features_all.py
