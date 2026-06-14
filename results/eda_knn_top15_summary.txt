@@ -1,0 +1,102 @@
+# EDA wrist + kNN top15 LOSO summary
+
+Dataset usato: data_features\eda_features_all_60s.csv
+Feature candidate (36): eda_mean, eda_std, eda_range, eda_skew, eda_kurtosis, eda_slope, eda_derivative_mean, eda_derivative_std, eda_derivative_max, eda_tonic_std, eda_phasic_std, eda_phasic_auc, eda_scr_count, eda_scr_amplitude_std, eda_scr_amplitude_max, eda_scr_prominence_mean, eda_mean_baseline_delta, eda_std_baseline_delta, eda_range_baseline_delta, eda_tonic_std_baseline_delta, eda_phasic_std_baseline_delta, eda_phasic_auc_baseline_delta, eda_scr_count_baseline_delta, eda_scr_amplitude_std_baseline_delta, eda_scr_amplitude_max_baseline_delta, eda_scr_prominence_mean_baseline_delta, eda_mean_baseline_zscore, eda_std_baseline_zscore, eda_range_baseline_zscore, eda_tonic_std_baseline_zscore, eda_phasic_std_baseline_zscore, eda_phasic_auc_baseline_zscore, eda_scr_count_baseline_zscore, eda_scr_amplitude_std_baseline_zscore, eda_scr_amplitude_max_baseline_zscore, eda_scr_prominence_mean_baseline_zscore
+Feature usate dal modello top15 (15): eda_mean_baseline_zscore, eda_phasic_auc_baseline_delta, eda_phasic_auc_baseline_zscore, eda_scr_count_baseline_delta, eda_range_baseline_delta, eda_scr_count_baseline_zscore, eda_mean_baseline_delta, eda_phasic_std_baseline_delta, eda_std_baseline_delta, eda_phasic_std_baseline_zscore, eda_mean, eda_range_baseline_zscore, eda_derivative_mean, eda_scr_amplitude_max_baseline_delta, eda_slope
+Le top15 sono state scelte dalla classifica di stabilita' Random Forest sui fold LOSO; la classifica viene rigenerata e salvata per controllo.
+
+## Modello valutato
+Classificatore finale: KNeighborsClassifier(n_neighbors=9, weights='distance')
+Selettore feature: RandomForestClassifier(n_estimators=500, min_samples_leaf=2, class_weight='balanced', random_state=42)
+Metodo di validazione: Leave-One-Subject-Out.
+Scaling: StandardScaler fittato solo sul training fold dopo la selezione.
+
+## Assunzione metodologica
+Le feature baseline_delta e baseline_zscore usano le finestre baseline personali (`original_label=1`) dello stesso soggetto. Il modello valutato usa sempre la stessa lista di 15 feature aggregate, cosi' resta semplice da descrivere e riprodurre.
+
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.9096 (90.96%)
+Precision media sui fold: 0.8591 (85.91%)
+Recall media sui fold: 0.7809 (78.09%)
+F1 media sui fold: 0.7935 (79.35%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.9102 (91.02%)
+Precision aggregata globale: 0.9061 (90.61%)
+Recall aggregata globale: 0.7819 (78.19%)
+F1 aggregata globale: 0.8395 (83.95%)
+
+## Confronto
+EDA ridotta 16 feature: F1=0.7611 (76.11%), Accuracy=0.8597 (85.97%)
+EDA baseline-normalized 36 feature: F1=0.8114 (81.14%), Accuracy=0.8952 (89.52%)
+Delta F1 top15 - 36 feature: +0.0281 (2.81%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[722  26]
+ [ 70 251]]
+TN=722, FP=26, FN=70, TP=251
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.91      0.97      0.94       748
+           1       0.91      0.78      0.84       321
+
+    accuracy                           0.91      1069
+   macro avg       0.91      0.87      0.89      1069
+weighted avg       0.91      0.91      0.91      1069
+
+
+## Classifica feature
+                                feature  mean_importance  std_importance  selected_count  used_by_model  selected_rate
+               eda_mean_baseline_zscore         0.107777        0.026962              15           True       1.000000
+          eda_phasic_auc_baseline_delta         0.096141        0.009716              15           True       1.000000
+         eda_phasic_auc_baseline_zscore         0.093741        0.009646              15           True       1.000000
+           eda_scr_count_baseline_delta         0.081663        0.011996              15           True       1.000000
+               eda_range_baseline_delta         0.064636        0.011295              15           True       1.000000
+          eda_scr_count_baseline_zscore         0.062721        0.010097              15           True       1.000000
+                eda_mean_baseline_delta         0.052108        0.015341              15           True       1.000000
+          eda_phasic_std_baseline_delta         0.047033        0.006501              15           True       1.000000
+                 eda_std_baseline_delta         0.039875        0.007565              15           True       1.000000
+         eda_phasic_std_baseline_zscore         0.029953        0.007032              15           True       1.000000
+                               eda_mean         0.027026        0.003029              15           True       1.000000
+              eda_range_baseline_zscore         0.022218        0.003314              14           True       0.933333
+                    eda_derivative_mean         0.019753        0.002030              14           True       0.933333
+   eda_scr_amplitude_max_baseline_delta         0.022109        0.004409              13           True       0.866667
+                              eda_slope         0.018185        0.002033               7           True       0.466667
+  eda_scr_amplitude_std_baseline_zscore         0.018306        0.002586               6          False       0.400000
+                eda_std_baseline_zscore         0.016129        0.002221               4          False       0.266667
+           eda_tonic_std_baseline_delta         0.013714        0.002370               1          False       0.066667
+   eda_scr_amplitude_std_baseline_delta         0.012303        0.002667               1          False       0.066667
+          eda_tonic_std_baseline_zscore         0.014421        0.002137               0          False       0.000000
+                         eda_phasic_auc         0.013440        0.002368               0          False       0.000000
+  eda_scr_amplitude_max_baseline_zscore         0.012244        0.001485               0          False       0.000000
+                                eda_std         0.011188        0.001507               0          False       0.000000
+                          eda_tonic_std         0.010075        0.001092               0          False       0.000000
+                     eda_derivative_max         0.009258        0.000970               0          False       0.000000
+                              eda_range         0.009035        0.000735               0          False       0.000000
+eda_scr_prominence_mean_baseline_zscore         0.008923        0.001130               0          False       0.000000
+                     eda_derivative_std         0.008567        0.000951               0          False       0.000000
+                               eda_skew         0.008423        0.001391               0          False       0.000000
+                         eda_phasic_std         0.007979        0.001219               0          False       0.000000
+ eda_scr_prominence_mean_baseline_delta         0.007642        0.001058               0          False       0.000000
+                          eda_scr_count         0.007595        0.001226               0          False       0.000000
+                           eda_kurtosis         0.007065        0.000461               0          False       0.000000
+                  eda_scr_amplitude_max         0.006748        0.000976               0          False       0.000000
+                eda_scr_prominence_mean         0.006168        0.000833               0          False       0.000000
+                  eda_scr_amplitude_std         0.005836        0.000875               0          False       0.000000
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.6435).
+- S14: accuracy=0.6901, precision=0.0000, recall=0.0000, f1=0.0000, TN=49, FP=0, FN=22, TP=0
+- S17: accuracy=0.7838, precision=1.0000, recall=0.3043, f1=0.4667, TN=51, FP=0, FN=16, TP=7
+- S2: accuracy=0.8507, precision=1.0000, recall=0.4737, f1=0.6429, TN=48, FP=0, FN=10, TP=9
+- S3: accuracy=0.8235, precision=0.9000, recall=0.4500, f1=0.6000, TN=47, FP=1, FN=11, TP=9
+
+## Interpretazione
+La versione top15 mantiene o migliora il F1 della versione a 36 feature, quindi e' preferibile per compattezza e spiegabilita'.

@@ -322,3 +322,47 @@
   - `results/report_progetto_wesad_dettagliato.pdf`
 - Lunghezza PDF: `14` pagine.
 - Contenuto: sintesi del progetto, coerenza con linee guida d'esame, dataset WESAD, mapping label, segmentazione, LOSO, feature extraction per ogni segnale, modelli, normalizzazione, risultati comparativi, focus RESP, analisi critica, confronto con letteratura, traccia per PowerPoint da 15 slide e domande possibili per l'orale.
+
+
+## Test EDA top15 feature
+
+- Script creato: `src/train_eda_knn_top15_loso.py`
+- Dataset usato: `data_features/eda_features_all_60s.csv`
+- Feature candidate: `36` dalla migliore configurazione EDA baseline-normalized.
+- Selezione: top `15` aggregate dalla classifica di stabilita' `RandomForestClassifier` sui fold LOSO.
+- Modello finale per fold: `KNeighborsClassifier(n_neighbors=9, weights="distance")` con `StandardScaler` fittato solo sul training fold.
+- Top 15 feature aggregate: `eda_mean_baseline_zscore, eda_phasic_auc_baseline_delta, eda_phasic_auc_baseline_zscore, eda_scr_count_baseline_delta, eda_range_baseline_delta, eda_scr_count_baseline_zscore, eda_mean_baseline_delta, eda_phasic_std_baseline_delta, eda_std_baseline_delta, eda_phasic_std_baseline_zscore, eda_mean, eda_range_baseline_zscore, eda_derivative_mean, eda_scr_amplitude_max_baseline_delta, eda_slope`
+- Risultati:
+  - Accuracy aggregata: 0.9102 (91.02%)
+  - Precision aggregata: 0.9061 (90.61%)
+  - Recall aggregata: 0.7819 (78.19%)
+  - F1 aggregato: 0.8395 (83.95%)
+  - Confusion matrix: TN=722, FP=26, FN=70, TP=251
+- Delta F1 vs EDA baseline-normalized 36 feature: +0.0281 (2.81%)
+- Soggetti problematici secondo soglia F1: S14, S17, S2, S3
+- File generati:
+  - `results/eda_knn_top15_loso_per_subject.csv`
+  - `results/eda_knn_top15_feature_importance.csv`
+  - `results/eda_knn_top15_summary.txt`
+
+
+## Test BVP top15 feature
+
+- Script creato: `src/train_bvp_knn_top15_loso.py`
+- Dataset usato: `data_features/bvp_features_all_60s.csv`
+- Feature candidate: `25` dalla baseline BVP completa.
+- Selezione: top `15` aggregate dalla classifica di stabilita' `RandomForestClassifier` sui fold LOSO.
+- Modello finale per fold: `KNeighborsClassifier(n_neighbors=9, weights="distance")` con `StandardScaler` fittato solo sul training fold.
+- Top 15 feature aggregate: `bvp_hr_mean, bvp_ibi_mean, bvp_rmssd, bvp_hr_std, bvp_median, bvp_peak_count, bvp_ibi_std, bvp_sdnn, bvp_valid_ibi_count, bvp_peak_prominence_mean, bvp_peak_prominence_std, bvp_iqr, bvp_ibi_max, bvp_hr_min, bvp_skew`
+- Risultati:
+  - Accuracy aggregata: 0.8531 (85.31%)
+  - Precision aggregata: 0.7515 (75.15%)
+  - Recall aggregata: 0.7632 (76.32%)
+  - F1 aggregato: 0.7573 (75.73%)
+  - Confusion matrix: TN=667, FP=81, FN=76, TP=245
+- Delta F1 vs BVP completo 25 feature: +0.0484 (4.84%)
+- Soggetti problematici secondo soglia F1: S15, S3, S9
+- File generati:
+  - `results/bvp_knn_top15_loso_per_subject.csv`
+  - `results/bvp_knn_top15_feature_importance.csv`
+  - `results/bvp_knn_top15_summary.txt`

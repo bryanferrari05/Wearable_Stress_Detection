@@ -9,7 +9,9 @@
 
 # 2) Training e valutazione dei modelli principali
 .\.venv\Scripts\python.exe src\train_bvp_knn_loso.py
+.\.venv\Scripts\python.exe src\train_bvp_knn_top15_loso.py
 .\.venv\Scripts\python.exe src\train_eda_knn_loso_baseline_norm.py
+.\.venv\Scripts\python.exe src\train_eda_knn_top15_loso.py
 .\.venv\Scripts\python.exe src\train_ecg_chest_rf_baseline_norm.py
 .\.venv\Scripts\python.exe src\train_emg_chest_rf_loso.py
 .\.venv\Scripts\python.exe src\train_emg_chest_rf_top15_loso.py

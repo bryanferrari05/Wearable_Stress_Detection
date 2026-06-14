@@ -1,0 +1,91 @@
+# BVP wrist + kNN top15 LOSO summary
+
+Dataset usato: data_features\bvp_features_all_60s.csv
+Feature candidate (25): bvp_mean, bvp_std, bvp_min, bvp_max, bvp_range, bvp_median, bvp_iqr, bvp_rms, bvp_energy, bvp_skew, bvp_kurtosis, bvp_peak_count, bvp_valid_ibi_count, bvp_peak_prominence_mean, bvp_peak_prominence_std, bvp_ibi_mean, bvp_ibi_std, bvp_ibi_min, bvp_ibi_max, bvp_hr_mean, bvp_hr_std, bvp_hr_min, bvp_hr_max, bvp_rmssd, bvp_sdnn
+Feature usate dal modello top15 (15): bvp_hr_mean, bvp_ibi_mean, bvp_rmssd, bvp_hr_std, bvp_median, bvp_peak_count, bvp_ibi_std, bvp_sdnn, bvp_valid_ibi_count, bvp_peak_prominence_mean, bvp_peak_prominence_std, bvp_iqr, bvp_ibi_max, bvp_hr_min, bvp_skew
+Le top15 sono state scelte dalla classifica di stabilita' Random Forest sui fold LOSO; la classifica viene rigenerata e salvata per controllo.
+Feature escluse per evitare leakage: subject, start_sec, end_sec, window_sec, step_sec, original_label, label, label_purity
+
+## Modello valutato
+Classificatore finale: KNeighborsClassifier(n_neighbors=9, weights='distance')
+Selettore feature: RandomForestClassifier(n_estimators=500, min_samples_leaf=2, class_weight='balanced', random_state=42)
+Metodo di validazione: Leave-One-Subject-Out.
+Scaling: StandardScaler fittato solo sul training fold.
+
+Numero totale di soggetti: 15
+Numero totale di finestre/campioni: 1069
+Distribuzione globale delle classi: 0:748; 1:321
+
+## Metriche medie sui fold
+Accuracy media sui fold: 0.8530 (85.30%)
+Precision media sui fold: 0.7857 (78.57%)
+Recall media sui fold: 0.7586 (75.86%)
+F1 media sui fold: 0.7537 (75.37%)
+
+## Metriche aggregate globali
+Accuracy aggregata globale: 0.8531 (85.31%)
+Precision aggregata globale: 0.7515 (75.15%)
+Recall aggregata globale: 0.7632 (76.32%)
+F1 aggregata globale: 0.7573 (75.73%)
+
+## Confronto
+BVP completo 25 feature: F1=0.7089 (70.89%), Accuracy=0.8279 (82.79%)
+Delta F1 top15 - 25 feature: +0.0484 (4.84%)
+
+## Confusion matrix aggregata
+Righe = classi vere, colonne = classi predette, ordine classi [0, 1].
+[[667  81]
+ [ 76 245]]
+TN=667, FP=81, FN=76, TP=245
+
+## Classification report aggregato
+              precision    recall  f1-score   support
+
+           0       0.90      0.89      0.89       748
+           1       0.75      0.76      0.76       321
+
+    accuracy                           0.85      1069
+   macro avg       0.82      0.83      0.83      1069
+weighted avg       0.85      0.85      0.85      1069
+
+
+## Classifica feature
+                 feature  mean_importance  std_importance  selected_count  used_by_model  selected_rate
+             bvp_hr_mean         0.181899        0.009164              15           True       1.000000
+            bvp_ibi_mean         0.118975        0.007103              15           True       1.000000
+               bvp_rmssd         0.094224        0.007251              15           True       1.000000
+              bvp_hr_std         0.066004        0.005758              15           True       1.000000
+              bvp_median         0.064208        0.006580              15           True       1.000000
+          bvp_peak_count         0.058427        0.006432              15           True       1.000000
+             bvp_ibi_std         0.053516        0.005373              15           True       1.000000
+                bvp_sdnn         0.050591        0.007336              15           True       1.000000
+     bvp_valid_ibi_count         0.040402        0.003601              15           True       1.000000
+bvp_peak_prominence_mean         0.030183        0.003359              15           True       1.000000
+ bvp_peak_prominence_std         0.025465        0.002440              15           True       1.000000
+                 bvp_iqr         0.024553        0.002132              15           True       1.000000
+             bvp_ibi_max         0.020985        0.001741              15           True       1.000000
+              bvp_hr_min         0.019750        0.001520              12           True       0.800000
+                bvp_skew         0.018042        0.001287               8           True       0.533333
+              bvp_energy         0.017168        0.001491               5          False       0.333333
+            bvp_kurtosis         0.017188        0.001473               2          False       0.133333
+                 bvp_std         0.016309        0.001532               1          False       0.066667
+                 bvp_rms         0.016241        0.001707               1          False       0.066667
+                 bvp_min         0.015320        0.001184               1          False       0.066667
+                 bvp_max         0.014496        0.001150               0          False       0.000000
+               bvp_range         0.013791        0.001467               0          False       0.000000
+                bvp_mean         0.011792        0.000861               0          False       0.000000
+             bvp_ibi_min         0.005322        0.000528               0          False       0.000000
+              bvp_hr_max         0.005149        0.000616               0          False       0.000000
+
+## Controlli predizioni
+Classi predette globalmente: [0, 1]
+Il modello predice entrambe le classi.
+
+## Soggetti con performance molto piu' bassa
+Criterio: F1 < media fold F1 - 0.15 (0.6037).
+- S15: accuracy=0.7465, precision=0.5909, recall=0.5909, f1=0.5909, TN=40, FP=9, FN=9, TP=13
+- S3: accuracy=0.7206, precision=0.5217, recall=0.6000, f1=0.5581, TN=37, FP=11, FN=8, TP=12
+- S9: accuracy=0.7917, precision=0.7143, recall=0.4762, f1=0.5714, TN=47, FP=4, FN=11, TP=10
+
+## Interpretazione
+La versione top15 riduce le feature BVP da 25 a 15 e migliora il F1 rispetto alla baseline completa. Le feature selezionate sono soprattutto HR, IBI, RMSSD/SDNN, conteggio picchi e prominenza, quindi sono anche piu' facili da motivare fisiologicamente.
